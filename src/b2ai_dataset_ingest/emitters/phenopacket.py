@@ -70,7 +70,7 @@ class PhenopacketEmitter(Emitter):
     def write_all(self, participants: Iterable[Participant], out_dir: Path) -> int:
         """Emit each participant to ``out_dir/<participant_id>.json``; return the count."""
         out_dir = Path(out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
+        _mkdir_private(out_dir)
         count = 0
         for participant in participants:
             packet = self.emit(participant)
@@ -79,6 +79,26 @@ class PhenopacketEmitter(Emitter):
             count += 1
         logger.info("wrote %d phenopackets to %s", count, out_dir)
         return count
+
+
+def _mkdir_private(out_dir: Path) -> None:
+    """Create the output directory owner-only, and tighten it if it already exists.
+
+    Phenopackets are per-participant records. Emitted from the source datasets they
+    inherit that data's restrictions (AI-READI Data License §3.E, and the B2AI-Voice
+    PhysioNet DUA is comparable), so the default umask of 022 is wrong here: it
+    leaves them group- and world-readable.
+
+    Applied unconditionally rather than only for the source data. The emitter cannot
+    tell real input from synthetic without being told, guessing from the path would
+    be exactly the kind of policy-in-the-wrong-place this repo has already been bitten
+    by, and 0700 costs the owner nothing. Loosening afterwards is a deliberate act;
+    an accidental leak cannot be undone.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # mkdir's mode is ignored when the directory already exists, and is masked by
+    # the umask when it does not, so set it explicitly either way.
+    out_dir.chmod(0o700)
 
 
 # -- message builders --

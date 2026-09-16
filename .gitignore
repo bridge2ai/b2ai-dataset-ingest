@@ -26,6 +26,11 @@ dist/
 # Browser-automation scratch (Playwright MCP page/console dumps)
 .playwright-mcp/
 
+# Stratiphy's downloaded HPO build (~22 MB). Deliberately NOT under data/, whose
+# default it would otherwise take: `stratiphy setup download -d` defaults to ./data,
+# which here is the protected input tree.
+/.stratiphy/
+
 # OS / editor
 .DS_Store
 .idea/

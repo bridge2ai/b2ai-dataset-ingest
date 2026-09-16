@@ -173,9 +173,68 @@ On the synthetic cohort the answer is that there is very little phenotype signal
 of 0.6 terms present per participant, with 98 of 173 carrying none at all. That is a
 property of the synthetic tables, which are 2.4% dense.
 
-That number is the gate on any clustering. Phenotype-driven clustering needs terms to
-compute similarity over, so run the profiler first and read the terms-per-participant
+That number is the gate on the clustering below. Phenotype-driven clustering needs terms
+to compute similarity over, so run the profiler first and read the terms-per-participant
 figure before investing in a clustering run.
+
+### Clustering
+
+[Stratiphy](https://github.com/P2GX/stratiphy) does the clustering. It reads phenopackets
+directly, groups participants by HPO semantic similarity rather than by flat vectors, and
+decides *whether the cohort should be split at all* using the gap statistic against
+randomised cohorts. Install it with the `clustering` extra.
+
+```bash
+uv sync --extra clustering
+scripts/cluster_phenopackets.sh \
+  out/synthetic/voice_dgp/phenopackets out/synthetic/voice_dgp/analysis
+```
+
+That runs Stratiphy's `setup`, `preprocess` and `compute`, then the report. Anything after
+the two directories is passed through to `compute`, so `--rand-iter 20 --mc-iter 10000`
+gives a fast coarse pass; the defaults of 100 randomised cohorts and a million Monte-Carlo
+iterations are what a real run wants.
+
+The script exists for one reason. Stratiphy's `--data` defaults to the repo's own input
+tree, which is protected here, so without an explicit `-d` its `setup download` drops a
+22 MB HPO build into it. Every call passes `-d .stratiphy`, which is gitignored.
+
+Only the last step is ours. Stratiphy's CLI covers the clustering; its result is a
+protobuf with no CLI to read it, so `scripts/summarize_clusters.py` fills that one gap.
+It runs as part of the script above; call it directly only to re-summarise an existing
+`results.pb` without re-clustering.
+
+The headline it prints is the verdict, not the partition. A partition exists at every k
+whether or not it means anything. On the synthetic cohort the verdict is **do not split**,
+at a split probability of 0.11, and the sizes show why: k=2 gives 171 and 2. That is what
+0.6 terms per participant buys, and it is the expected answer rather than a failure.
+
+### The whole thing, in one command
+
+`scripts/voice_pipeline.sh` runs validate, ingest with HPO normalisation, profile,
+cluster and summarise, stopping at the first step that fails.
+
+```bash
+uv sync --extra validation --extra analysis --extra clustering --extra hpo
+scripts/voice_pipeline.sh <the phenotype dir> out/<provenance>/voice_dgp
+```
+
+Anything after the two directories goes to `stratiphy compute`, so
+`--rand-iter 20 --mc-iter 10000` gives a fast coarse pass.
+
+It owns one thing the individual steps cannot: **pinning the ontology**. Term collapsing
+and clustering have to reason over the same graph, and the release the mappings were
+curated against is the one both should use. `stratiphy setup download` fetches the
+*current* release, so this fetches the pinned one into `.stratiphy/hp.json` first and both
+steps agree by construction. The version comes from the SSSOM files, so re-curating moves
+it. Without this the clustering runs on whatever HPO happened to be current, which is how
+`2026-09-01` ended up clustering mappings curated against `2026-02-16`.
+
+It deliberately does not pass `--controversy`. With the ancestor pairs already collapsed
+upstream, a sanitation prompt means something else is wrong and is worth seeing.
+
+The steps below are the same thing spelled out, for when you want to run one of them
+on its own.
 
 ### The four ingests
 
@@ -204,6 +263,75 @@ layout before anything is written.
 writes one file per participant, so a plain re-run overwrites everyone still in the cohort
 but leaves a stale file behind for anyone who has since dropped out, and the directory
 becomes a silent union of two runs. Pass `--force` to delete the existing set first.
+
+#### Restricting to a questionnaire battery
+
+Participants were given different questionnaires, and **every HPO term comes from a
+questionnaire**. On the real Voice cohort 413 people received four, 242 received six and
+51 received eleven, with mean term counts of 3.57, 5.62 and 9.84. Term count tracks
+coverage almost linearly, so clustering finds that gradient before it finds anything
+clinical, and it is administrative rather than phenotypic.
+
+`scripts/cohort_overlap.py` reports who was offered what and what a common battery would
+cost. `--questionnaires` then applies only the named tables, so every participant draws
+from the same phenotype vocabulary:
+
+```bash
+uv run b2ai-ingest voice --input <the phenotype dir> \
+  --output out/<provenance>/voice_dgp/phenopackets_gad7_anxiety_phq9_vhi10_voice_perception \
+  --questionnaires phq9,gad7_anxiety,vhi10,voice_perception \
+  --require-all-questionnaires
+```
+
+`--require-all-questionnaires` additionally emits only participants offered every one of
+them, where **offered means a row exists**, filled in or not. Without it, a participant
+missing one of the named questionnaires still has a gap inside the battery, which is the
+same confound at smaller scale. The ingest summary reports how many are in that position
+either way.
+
+**Name the output directory after the battery, with the questionnaires sorted.** There
+will be more than one, and a directory called `phenopackets-battery` tells you nothing six
+months later. Sorting matters because `phq9,vhi10` and `vhi10,phq9` otherwise produce
+differently-named directories holding identical output.
+
+Note that a directory name is a weak record: rename it and the provenance is gone. A
+manifest would be more robust but cannot live in the phenopackets directory, since the
+profiler, stratiphy's `preprocess` and `summarize_clusters.py` all glob `*.json` there and
+would parse it as a phenopacket.
+
+#### Collapsing redundant HPO terms
+
+Two questionnaire items can map to a term and to one of its ancestors. Four
+`dyspnea_index` items map to `HP:0002094 Dyspnea` and one to its child `HP:0002875
+Exertional dyspnea`, so anyone who answers both is annotated with both. Neither
+assertion is wrong, but the ancestor is implied, and tools that reason over the HPO
+graph treat the pair as an inconsistency to resolve. Stratiphy asks about every one,
+once per participant.
+
+`--normalize-hpo` collapses them at the source, keeping the more specific term and
+**merging the ancestor's evidence into it** rather than discarding it, so the record that
+three separate dyspnea items were answered survives. It is off by default: the raw
+output is the faithful record of what the instruments said.
+
+```bash
+uv sync --extra hpo
+uv run b2ai-ingest voice --input <the phenotype dir> \
+  --output out/<provenance>/voice_dgp/phenopackets \
+  --normalize-hpo --hpo-json .stratiphy/hp.json
+```
+
+**The ontology is supplied, never downloaded, and must be the release the mappings
+declare.** A mismatch is fatal rather than a warning, because collapsing is destructive
+and decided by the graph's subsumptions: normalising against a different release would
+drop assertions on the strength of relationships the curators never approved. The version
+comes from `object_source_version` in the SSSOM files, so re-curating moves it
+automatically.
+
+Pass the same `hp.json` the clustering reads, for the same reason. `stratiphy setup
+download` fetches the *current* release and skips the download when a file is already
+there, so putting the pinned release at `.stratiphy/hp.json` makes both steps agree.
+Today they do not: the mappings pin `2026-02-16` and a fresh `setup download` fetches
+`2026-09-01`.
 
 For the real cells under the ownership split, the same two commands go through the data
 account and call the venv binary directly, since `uv run` needs a writable home. See

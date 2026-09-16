@@ -57,11 +57,23 @@ with no bespoke wrapper, and that the phenotype yield of each run is measurable.
    is the measure of whether a run produced anything worth analysing, and it is
    DGP-agnostic so it serves all four cells unchanged.
 
-5. **Wire up [stratiphy](https://github.com/P2GX/stratiphy)** for clustering, in its own
-   PR. It consumes phenopackets directly, pins the same `phenopackets ~= 2.0.2` the
-   emitter produces, and clusters on HPO semantic similarity rather than flat vectors. Its
-   `-d` defaults to `./data`, which is the protected input tree here, so it must always be
-   passed explicitly.
+5. **Wire up [stratiphy](https://github.com/P2GX/stratiphy)** for clustering. Done in the
+   PR stacked on this one. It consumes phenopackets directly, pins the same
+   `phenopackets ~= 2.0.2` the emitter produces, and clusters on HPO semantic similarity
+   rather than flat vectors. Only the result reader is ours: Stratiphy's own CLI covers
+   `setup`, `preprocess` and `compute`, but its output is a protobuf with no CLI to read
+   it.
+
+6. **Collapse an HPO term asserted alongside its own ancestor**, behind
+   `--normalize-hpo`. Two items can map to a term and its ancestor, so anyone answering
+   both carries a redundant pair that downstream graph-aware tools treat as an
+   inconsistency. Keeps the specific term and merges the ancestor's evidence into it,
+   so the record of which item fired survives. Off by default: the raw output is the
+   faithful record of what the instruments said.
+
+   Uses the same ontology library and the same `hp.json` as the clustering, and refuses
+   to run unless that file is the release the mappings declare. Collapsing is destructive
+   and decided by subsumptions, so a version mismatch is fatal rather than a warning.
 
 ## Critical files
 

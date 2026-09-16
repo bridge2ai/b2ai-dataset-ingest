@@ -84,8 +84,11 @@ def load(indir: Path) -> tuple[pd.DataFrame, Counter, Counter, dict[str, str]]:
     return pd.DataFrame(rows).set_index("phenopacket_id"), present_tally, excluded_tally, labels
 
 
-def describe(counts: pd.Series) -> dict[str, float]:
-    values = counts.to_numpy()
+def describe(counts) -> dict[str, float]:
+    """Distribution summary. Untyped input: a DataFrame column is a Series at
+    runtime but widens to Series | DataFrame for a checker, and asarray copes
+    with either."""
+    values = np.asarray(counts)
     return {
         "n": int(values.size),
         "mean": round(float(values.mean()), 2),
@@ -126,7 +129,7 @@ def plot(per_packet: pd.DataFrame, present_tally: Counter, labels: dict[str, str
     # Right: most frequent terms, horizontal so the labels stay readable.
     common = present_tally.most_common(top)[::-1]
     if common:
-        names = [f"{labels.get(t, t)[:44]}" for t, _ in common]
+        names = [str(labels.get(str(t), str(t)))[:44] for t, _ in common]
         vals = [c for _, c in common]
         ax_freq.barh(range(len(vals)), vals, color=SERIES, height=0.75)
         ax_freq.set_yticks(range(len(vals)))
@@ -162,7 +165,12 @@ def main() -> None:
                     help="provenance label for the figure; defaults to the input path")
     ap.add_argument("--no-plot", action="store_true")
     args = ap.parse_args()
-    args.outdir.mkdir(parents=True, exist_ok=True)
+    # Owner-only: hpo_per_packet.tsv is per-participant, and derived from the source
+    # data it carries that data's restrictions. The default umask would leave it
+    # group- and world-readable. Set explicitly, since mkdir's mode is masked when
+    # creating and ignored when the directory already exists.
+    args.outdir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    args.outdir.chmod(0o700)
 
     per_packet, present_tally, excluded_tally, labels = load(args.input)
     label = args.label or source_label(args.input)

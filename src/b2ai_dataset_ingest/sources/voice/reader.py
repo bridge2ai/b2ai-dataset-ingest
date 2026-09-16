@@ -87,6 +87,10 @@ class _Accumulator:
         self.measurements: list[MeasurementObservation] = []
         self.phenotypic_features: list[PhenotypicFeatureObservation] = []
         self._disease_ids: set[str] = set()
+        #: questionnaire tables this participant has a row in. A row means the
+        #: questionnaire was administered, whether or not it was filled in, which
+        #: is the only place that distinction exists.
+        self.questionnaires_offered: set[str] = set()
 
     def add_disease(self, disease: DiseaseObservation) -> None:
         if disease.term.id not in self._disease_ids:
@@ -98,9 +102,19 @@ class VoiceSource(Source):
     dataset_id = "bridge2ai-voice"
 
     def __init__(
-        self, root: Path, config_dir: Path, mappings: Iterable[Path] | None = None
+        self,
+        root: Path,
+        config_dir: Path,
+        mappings: Iterable[Path] | None = None,
+        questionnaires: Iterable[str] | None = None,
+        require_all_questionnaires: bool = False,
     ) -> None:
         super().__init__(root, config_dir)
+        #: Restrict which questionnaire tables are applied; None -> all configured.
+        #: Every HPO term comes from a questionnaire, so this is what equalises
+        #: phenotype coverage across participants who were given different batteries.
+        self._questionnaires = set(questionnaires) if questionnaires else None
+        self._require_all = require_all_questionnaires
         #: Aggregate, PHI-safe counts for the most recent :meth:`read`. The CLI prints it.
         self.report = IngestReport()
         #: SSSOM files carrying B2AI -> HPO ``when_value`` rules; None -> the shipped defaults.
@@ -126,11 +140,27 @@ class VoiceSource(Source):
         self._read_diagnoses(accumulator)
         self._read_questionnaires(accumulator)
 
-        self.report.participants = len(participants)
+        # Coverage is only uneven relative to a named set: with no --questionnaires
+        # there is no battery to be incomplete against, so nothing is counted.
+        wanted = self._questionnaires
+        if wanted:
+            self.report.questionnaires_selected = sorted(wanted)
+
+        emitted = 0
+        features_emitted = 0
         for participant_id in sorted(participants):
             acc = participants[participant_id]
+            if wanted:
+                missing = wanted - acc.questionnaires_offered
+                if missing:
+                    self.report.participants_partial_coverage += 1
+                    if self._require_all:
+                        self.report.participants_dropped_partial += 1
+                        continue
+            emitted += 1
             individual = acc.individual or Individual(id=participant_id)
             self.report.diseases_emitted += len(acc.diseases)
+            features_emitted += len(acc.phenotypic_features)
             yield Participant(
                 individual=individual,
                 diseases=acc.diseases,
@@ -138,6 +168,11 @@ class VoiceSource(Source):
                 phenotypic_features=acc.phenotypic_features,
                 source_dataset=self.dataset_id,
             )
+        self.report.participants = emitted
+        # Overwrite the count the engine accumulated while reading: with a
+        # participant filter in play those two differ, and the reader who sees
+        # "10 phenopackets" next to "65 features" is being told something false.
+        self.report.features_derived = features_emitted
 
     # -- demographics -> Individual --
     def _read_demographics(self, accumulator: Any) -> None:
@@ -209,6 +244,8 @@ class VoiceSource(Source):
         configs = self._questionnaire_configs()
         for tsv in sorted(data_dir.glob("*.tsv")):
             table = tsv.stem
+            if self._questionnaires is not None and table not in self._questionnaires:
+                continue
             entry = configs.get(table)
             if entry is None:
                 logger.info("questionnaire: %s has no mapping config; not ingested", table)
@@ -221,6 +258,12 @@ class VoiceSource(Source):
             if not rows:
                 continue
             self.report.tables_read.append(table)
+            # A row means administered. Recorded before any value is read, so a
+            # participant who left the whole thing blank still counts as offered.
+            for row in rows:
+                pid = (row.get("participant_id") or "").strip()
+                if pid:
+                    accumulator(pid).questionnaires_offered.add(table)
             data_dict = load_data_dict(tsv.with_suffix(".json"))
             self._ingest_questionnaire_rows(table, mapping, engine, rows, data_dict, accumulator)
 
