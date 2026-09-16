@@ -4,6 +4,7 @@ The multisession fixture always runs. The real-synthetic-data slice runs only wh
 public synthetic tables have been fetched (``scripts/fetch_synthetic_data.sh``).
 """
 
+import json
 from pathlib import Path
 
 import phenopackets as pp
@@ -105,6 +106,61 @@ def _run_voice(tmp_path: Path, *extra: str):
         app,
         ["voice", "--input", str(SYNTHETIC), "--output", str(tmp_path), *extra],
     )
+
+
+# ------------------------------------------- restricting the questionnaire battery
+
+BATTERY = "phq9,gad7_anxiety,vhi10,voice_perception"
+
+
+@pytest.mark.skipif(not SYNTHETIC.is_dir(), reason="synthetic fixture not fetched")
+def test_questionnaires_restricts_which_tables_are_read(tmp_path: Path):
+    """Every HPO term comes from a questionnaire, so naming a subset is what bounds
+    the phenotype vocabulary every participant draws from."""
+    full = _run_voice(tmp_path / "full")
+    limited = _run_voice(tmp_path / "limited", "--questionnaires", BATTERY)
+    assert full.exit_code == limited.exit_code == 0
+
+    assert "restricted to gad7_anxiety, phq9, vhi10, voice_perception" in limited.output
+    # Same participants either way: naming questionnaires does not drop anyone.
+    assert len(list((tmp_path / "limited").glob("*.json"))) == len(
+        list((tmp_path / "full").glob("*.json"))
+    )
+    # But fewer terms, since the excluded questionnaires contributed some.
+    def features(d: Path) -> int:
+        return sum(
+            len(json.loads(p.read_text()).get("phenotypicFeatures", []))
+            for p in d.glob("*.json")
+        )
+
+    assert features(tmp_path / "limited") < features(tmp_path / "full")
+
+
+@pytest.mark.skipif(not SYNTHETIC.is_dir(), reason="synthetic fixture not fetched")
+def test_require_all_questionnaires_drops_partial_coverage(tmp_path: Path):
+    """A participant never offered one of the named questionnaires has an absent term
+    for an administrative reason, not a clinical one. That is the confound."""
+    kept = _run_voice(tmp_path / "kept", "--questionnaires", BATTERY)
+    strict = _run_voice(
+        tmp_path / "strict", "--questionnaires", BATTERY, "--require-all-questionnaires"
+    )
+    assert kept.exit_code == strict.exit_code == 0
+
+    n_kept = len(list((tmp_path / "kept").glob("*.json")))
+    n_strict = len(list((tmp_path / "strict").glob("*.json")))
+    assert 0 < n_strict < n_kept
+    assert "dropped (partial)" in strict.output
+    # Without the flag the confound is still there, and must be reported rather than
+    # left for someone to discover in the clustering.
+    assert "partial coverage" in kept.output
+
+
+@pytest.mark.skipif(not SYNTHETIC.is_dir(), reason="synthetic fixture not fetched")
+def test_require_all_questionnaires_needs_a_battery(tmp_path: Path):
+    result = _run_voice(tmp_path, "--require-all-questionnaires")
+    assert result.exit_code == 2
+    assert "--questionnaires" in result.output
+    assert not list(tmp_path.glob("*.json"))
 
 
 @pytest.mark.skipif(not SYNTHETIC.is_dir(), reason="synthetic fixture not fetched")

@@ -264,6 +264,41 @@ writes one file per participant, so a plain re-run overwrites everyone still in 
 but leaves a stale file behind for anyone who has since dropped out, and the directory
 becomes a silent union of two runs. Pass `--force` to delete the existing set first.
 
+#### Restricting to a questionnaire battery
+
+Participants were given different questionnaires, and **every HPO term comes from a
+questionnaire**. On the real Voice cohort 413 people received four, 242 received six and
+51 received eleven, with mean term counts of 3.57, 5.62 and 9.84. Term count tracks
+coverage almost linearly, so clustering finds that gradient before it finds anything
+clinical, and it is administrative rather than phenotypic.
+
+`scripts/cohort_overlap.py` reports who was offered what and what a common battery would
+cost. `--questionnaires` then applies only the named tables, so every participant draws
+from the same phenotype vocabulary:
+
+```bash
+uv run b2ai-ingest voice --input <the phenotype dir> \
+  --output out/<provenance>/voice_dgp/phenopackets_gad7_anxiety_phq9_vhi10_voice_perception \
+  --questionnaires phq9,gad7_anxiety,vhi10,voice_perception \
+  --require-all-questionnaires
+```
+
+`--require-all-questionnaires` additionally emits only participants offered every one of
+them, where **offered means a row exists**, filled in or not. Without it, a participant
+missing one of the named questionnaires still has a gap inside the battery, which is the
+same confound at smaller scale. The ingest summary reports how many are in that position
+either way.
+
+**Name the output directory after the battery, with the questionnaires sorted.** There
+will be more than one, and a directory called `phenopackets-battery` tells you nothing six
+months later. Sorting matters because `phq9,vhi10` and `vhi10,phq9` otherwise produce
+differently-named directories holding identical output.
+
+Note that a directory name is a weak record: rename it and the provenance is gone. A
+manifest would be more robust but cannot live in the phenopackets directory, since the
+profiler, stratiphy's `preprocess` and `summarize_clusters.py` all glob `*.json` there and
+would parse it as a phenopacket.
+
 #### Collapsing redundant HPO terms
 
 Two questionnaire items can map to a term and to one of its ancestors. Four

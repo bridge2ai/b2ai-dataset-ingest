@@ -138,6 +138,19 @@ def voice(
         help="Permanently delete existing phenopackets in --output, then write a "
         "fresh set. Does not merge.",
     ),
+    questionnaires: str = typer.Option(
+        "",
+        "--questionnaires",
+        help="Comma-separated questionnaire table names to use, e.g. "
+        "phq9,gad7_anxiety,vhi10. Others are not ingested. Every HPO term comes "
+        "from a questionnaire, so this is what equalises phenotype coverage.",
+    ),
+    require_all_questionnaires: bool = typer.Option(
+        False,
+        "--require-all-questionnaires",
+        help="With --questionnaires, emit only participants who were offered every "
+        "one of them. Offered means a row exists, answered or not.",
+    ),
     normalize_hpo: bool = typer.Option(
         False,
         "--normalize-hpo",
@@ -173,7 +186,21 @@ def voice(
     # caller with neither the old cohort nor a new one.
     existing = _refuse_if_populated(output, force=force)
 
-    source = VoiceSource(root=input, config_dir=config)
+    wanted = [q.strip() for q in questionnaires.split(",") if q.strip()]
+    if require_all_questionnaires and not wanted:
+        typer.echo(
+            "--require-all-questionnaires needs --questionnaires: there is no battery "
+            "to be incomplete against without one.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    source = VoiceSource(
+        root=input,
+        config_dir=config,
+        questionnaires=wanted or None,
+        require_all_questionnaires=require_all_questionnaires,
+    )
     participants = list(source.read())
 
     collapse_report = _normalize_hpo(participants, normalize_hpo, hpo_json)
