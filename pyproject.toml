@@ -23,9 +23,31 @@ dependencies = [
 [project.scripts]
 b2ai-ingest = "b2ai_dataset_ingest.cli:app"
 
+# The `scripts/` analyses over emitted phenopackets are exploratory tooling, not part
+# of the pipeline, and deliberately live outside the package so they do not ship in the
+# wheel. This is an extra rather than an ad-hoc `uv run --with ...` because runs against
+# the source data go through an account that cannot write uv's caches — the deps have to
+# already be in .venv. See scripts/ingest_and_cluster_real.sh.
 [project.optional-dependencies]
 validation = [
     "oaklib>=0.7.2",
+]
+analysis = [
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+]
+# Ontology graph access for `b2ai-ingest voice --normalize-hpo`. Deliberately the
+# same library stratiphy uses, reading the same hp.json, so a term is never collapsed
+# against a different graph than the one the clustering reasons over. `clustering`
+# already pulls it in transitively; this extra is for normalising without clustering.
+hpo = [
+    "hpo-toolkit>=0.8.1",
+]
+# Phenotype-driven clustering. Its own extra rather than folded into `analysis`
+# because it is heavy (hpo-toolkit, scikit-learn, scipy, statsmodels) and the HPO
+# profiler must stay installable without it.
+clustering = [
+    "stratiphy>=0.5.1",
 ]
 
 [dependency-groups]
