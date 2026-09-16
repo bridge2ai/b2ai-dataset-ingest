@@ -40,6 +40,16 @@ class IngestReport:
     #: Rows collapsed by "last non-empty wins" within a resolved (participant, session) group.
     rows_merged: int = 0
 
+    #: Questionnaires the run was restricted to, empty when all configured ones ran.
+    questionnaires_selected: list[str] = field(default_factory=list)
+    #: Participants with a row in some but not all of those questionnaires. Reported
+    #: whether or not they were dropped: an uneven battery means an absent HPO term
+    #: can mean "never asked" for some participants and "answered no" for others,
+    #: which any clustering will find before it finds anything clinical.
+    participants_partial_coverage: int = 0
+    #: Of those, how many were excluded by --require-all-questionnaires.
+    participants_dropped_partial: int = 0
+
     #: "table.column" -> count of answers that resolved against no choice/scale (item skipped).
     items_unresolved: Counter = field(default_factory=Counter)
     #: "table.column" -> count of demographics values with no ``value_map`` entry (dropped).
@@ -80,6 +90,24 @@ class IngestReport:
             + (f" ({', '.join(self.tables_read)})" if self.tables_read else ""),
             f"  rows merged:         {self.rows_merged}",
         ]
+        if self.questionnaires_selected:
+            lines.append(
+                f"  questionnaires:      restricted to "
+                f"{', '.join(self.questionnaires_selected)}"
+            )
+            if self.participants_dropped_partial:
+                lines.append(
+                    f"  dropped (partial):   {self.participants_dropped_partial} "
+                    "participant(s) were not offered all of them"
+                )
+            elif self.participants_partial_coverage:
+                # Not dropped, so the confound is still in the output. Say so with a
+                # number rather than leaving it to be discovered downstream.
+                lines.append(
+                    f"  partial coverage:    {self.participants_partial_coverage} "
+                    "participant(s) were not offered all of them (kept; pass "
+                    "--require-all-questionnaires to exclude)"
+                )
         if self.tables_unmapped:
             lines.append(f"  tables not mapped:   {', '.join(sorted(self.tables_unmapped))}")
         if self.tables_missing:

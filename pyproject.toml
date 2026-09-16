@@ -36,6 +36,13 @@ analysis = [
     "matplotlib>=3.8",
     "pandas>=2.0",
 ]
+# Ontology graph access for `b2ai-ingest voice --normalize-hpo`. Deliberately the
+# same library stratiphy uses, reading the same hp.json, so a term is never collapsed
+# against a different graph than the one the clustering reasons over. `clustering`
+# already pulls it in transitively; this extra is for normalising without clustering.
+hpo = [
+    "hpo-toolkit>=0.8.1",
+]
 # Phenotype-driven clustering. Its own extra rather than folded into `analysis`
 # because it is heavy (hpo-toolkit, scikit-learn, scipy, statsmodels) and the HPO
 # profiler must stay installable without it.

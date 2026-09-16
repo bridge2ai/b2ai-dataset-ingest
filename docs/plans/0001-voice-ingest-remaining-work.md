@@ -64,6 +64,17 @@ with no bespoke wrapper, and that the phenotype yield of each run is measurable.
    `setup`, `preprocess` and `compute`, but its output is a protobuf with no CLI to read
    it.
 
+6. **Collapse an HPO term asserted alongside its own ancestor**, behind
+   `--normalize-hpo`. Two items can map to a term and its ancestor, so anyone answering
+   both carries a redundant pair that downstream graph-aware tools treat as an
+   inconsistency. Keeps the specific term and merges the ancestor's evidence into it,
+   so the record of which item fired survives. Off by default: the raw output is the
+   faithful record of what the instruments said.
+
+   Uses the same ontology library and the same `hp.json` as the clustering, and refuses
+   to run unless that file is the release the mappings declare. Collapsing is destructive
+   and decided by subsumptions, so a version mismatch is fatal rather than a warning.
+
 ## Critical files
 
 - `scripts/ingest_real.sh` — deleted.

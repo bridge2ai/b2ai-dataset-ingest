@@ -64,6 +64,48 @@ def _refuse_if_populated(output: Path, *, force: bool) -> list[Path]:
     return existing
 
 
+def _normalize_hpo(participants, enabled: bool, hpo_json: Path | None):
+    """Collapse redundant HPO annotations, or return None when not asked to.
+
+    Every failure here is fatal rather than a warning. Collapsing is destructive and
+    is decided by the ontology's subsumptions, so falling back to un-normalized
+    output on a missing dependency, a missing file, or the wrong release would give
+    a run that looks like it normalized and did not.
+    """
+    if not enabled:
+        if hpo_json is not None:
+            typer.echo("--hpo-json has no effect without --normalize-hpo", err=True)
+        return None
+
+    from b2ai_dataset_ingest.ontology.hpo_coherence import (
+        OntologyUnavailable,
+        OntologyVersionMismatch,
+        collapse_all,
+        declared_hpo_version,
+        load_ontology,
+        require_version,
+    )
+
+    if hpo_json is None:
+        typer.echo(
+            "--normalize-hpo needs --hpo-json.\n"
+            "It must be the same hp.json any downstream clustering reads, so a term is "
+            "never collapsed on the strength of a subsumption that clustering does not "
+            "share. scripts/cluster_phenopackets.sh keeps one at .stratiphy/hp.json.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        ontology = load_ontology(hpo_json)
+        require_version(ontology, declared_hpo_version())
+    except (OntologyUnavailable, OntologyVersionMismatch) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
+
+    return collapse_all(participants, ontology)
+
+
 def _remove(existing: list[Path]) -> None:
     """Delete the previous set. Call this only once the new one is in hand.
 
@@ -96,6 +138,32 @@ def voice(
         help="Permanently delete existing phenopackets in --output, then write a "
         "fresh set. Does not merge.",
     ),
+    questionnaires: str = typer.Option(
+        "",
+        "--questionnaires",
+        help="Comma-separated questionnaire table names to use, e.g. "
+        "phq9,gad7_anxiety,vhi10. Others are not ingested. Every HPO term comes "
+        "from a questionnaire, so this is what equalises phenotype coverage.",
+    ),
+    require_all_questionnaires: bool = typer.Option(
+        False,
+        "--require-all-questionnaires",
+        help="With --questionnaires, emit only participants who were offered every "
+        "one of them. Offered means a row exists, answered or not.",
+    ),
+    normalize_hpo: bool = typer.Option(
+        False,
+        "--normalize-hpo",
+        help="Collapse an HPO term asserted alongside its own ancestor, keeping the "
+        "more specific term and merging the ancestor's evidence into it. Requires "
+        "--hpo-json and the 'hpo' extra.",
+    ),
+    hpo_json: Path = typer.Option(
+        None,
+        "--hpo-json",
+        help="Path to the hp.json used for --normalize-hpo. Must be the same release "
+        "the mappings declare, and the same file any downstream clustering reads.",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log per-table warnings."),
 ) -> None:
     """Ingest the Bridge2AI-Voice dataset into one phenopacket per participant."""
@@ -118,8 +186,24 @@ def voice(
     # caller with neither the old cohort nor a new one.
     existing = _refuse_if_populated(output, force=force)
 
-    source = VoiceSource(root=input, config_dir=config)
+    wanted = [q.strip() for q in questionnaires.split(",") if q.strip()]
+    if require_all_questionnaires and not wanted:
+        typer.echo(
+            "--require-all-questionnaires needs --questionnaires: there is no battery "
+            "to be incomplete against without one.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    source = VoiceSource(
+        root=input,
+        config_dir=config,
+        questionnaires=wanted or None,
+        require_all_questionnaires=require_all_questionnaires,
+    )
     participants = list(source.read())
+
+    collapse_report = _normalize_hpo(participants, normalize_hpo, hpo_json)
 
     _remove(existing)
     written = PhenopacketEmitter().write_all(participants, output)
@@ -127,6 +211,8 @@ def voice(
     # Aggregate, PHI-safe summary so silent degradation (skipped items, un-keyed sessions,
     # unmapped tables) is visible rather than hidden behind a reassuring file count.
     typer.echo(source.report.render())
+    if collapse_report is not None:
+        typer.echo(collapse_report.render())
 
 
 @app.command()
