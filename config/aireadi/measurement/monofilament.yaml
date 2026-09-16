@@ -1,0 +1,60 @@
+# Mapping: AI-READI clinical_data/measurement.csv, monofilament -> MeasurementObservation (IR)
+#
+# Two items: the number of sites at which a Semmes-Weinstein monofilament was felt, per foot,
+# out of ten tested. This is a peripheral-neuropathy screen, which matters in a type 2
+# diabetes cohort.
+#
+# WHY THESE TWO ITEMS AND NOT procedure_occurrence.csv
+# -----------------------------------------------------
+# procedure_occurrence.csv holds 22 monofilament rows per participant -- mssrf1..mssrf10 and
+# msslf1..msslf10 for the ten sites on each foot, plus mssrftt/msslftt "foot tested" flags.
+# Every one of them records only that a site WAS TESTED. None carries the result.
+#
+# The result -- how many sites were felt -- is here, in measurement.csv, as mssrffl and
+# msslffl. So the phenotype is in this file and procedure_occurrence adds nothing a
+# phenopacket can carry: twenty MedicalActions per participant saying "a test happened",
+# with the finding stored elsewhere. It is deliberately not ingested; see
+# docs/design/aireadi-ingest.md.
+#
+# LATERALITY IS IN THE LABEL, NOT IN body_site, AND THAT IS DELIBERATE
+# --------------------------------------------------------------------
+# The per-eye items in ophthalmic.yaml encode their side structurally, because UBERON has
+# `UBERON:0004549 right eye` and `UBERON:0004548 left eye`. UBERON has NO equivalent for the
+# foot: it carries `UBERON:0002387 pes` and no lateralized child (searched "right foot",
+# "left foot", "right pes", "left pes" against sqlite:obo:uberon on 2026-09-10; nothing).
+#
+# `UBERON:8300003`/`8300004` look like the answer and are NOT -- they are "right hindlimb"
+# and "left hindlimb", the whole limb rather than the foot. Using them here would assert the
+# wrong anatomical site.
+#
+# So body_site is the unlateralized `pes`, which is true, and the side is carried in the
+# curated assay label, which is honest about the fact that laterality is not structurally
+# encoded for these two items. A consumer filtering on body_site cannot separate the feet;
+# one reading the assay can.
+#
+# NCIT:C129294 verified against sqlite:obo:ncit on 2026-09-10: "Semmes Weinstein Monofilament
+# Examination", non-obsolete, def "A noninvasive screening tool for peripheral neuropathy...".
+# NOT used: NCIT:C100619/C100620 "MNSI - Right/Left Foot Monofilament", which look ideal but
+# are `is_a NCIT:C100119 MNSI Questionnaire Question` -- items of the Michigan Neuropathy
+# Screening Instrument specifically. AI-READI runs a ten-site count, not the MNSI item, so
+# claiming those codes would assert the wrong instrument.
+
+table: measurement
+delimiter: ","
+id_column: person_id
+key_column: measurement_source_value
+date_column: measurement_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+
+measures:
+  mssrffl:
+    assay: { id: "b2ai:measurement.mssrffl", label: "Right foot, monofilament sites felt (of 10)" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    procedure_code: { id: "NCIT:C129294", label: "Semmes Weinstein Monofilament Examination" }
+    body_site: { id: "UBERON:0002387", label: "pes" }
+  msslffl:
+    assay: { id: "b2ai:measurement.msslffl", label: "Left foot, monofilament sites felt (of 10)" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    procedure_code: { id: "NCIT:C129294", label: "Semmes Weinstein Monofilament Examination" }
+    body_site: { id: "UBERON:0002387", label: "pes" }

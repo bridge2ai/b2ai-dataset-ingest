@@ -16,7 +16,9 @@ from b2ai_dataset_ingest.model.core import (
     OntologyTerm,
     Participant,
     PhenotypicFeatureObservation,
+    ProcedureContext,
     Quantity,
+    ReferenceRange,
     TimePoint,
 )
 
@@ -29,6 +31,8 @@ __all__ = [
     "OntologyTerm",
     "Participant",
     "PhenotypicFeatureObservation",
+    "ProcedureContext",
     "Quantity",
+    "ReferenceRange",
     "TimePoint",
 ]

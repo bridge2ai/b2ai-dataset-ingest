@@ -20,11 +20,30 @@ class OntologyTerm(BaseModel):
     label: str | None = Field(None, description="Human-readable term label.")
 
 
+class ReferenceRange(BaseModel):
+    """The expected range for a measured value — the GA4GH ``ReferenceRange`` analogue.
+
+    Emitted only when BOTH bounds are known. ``ReferenceRange.low``/``.high`` are plain
+    proto3 doubles with no field presence, so an absent bound reads back as ``0.0`` and a
+    one-sided range would serialize as "the normal range is 39 to 0". A source that supplies
+    only one bound must drop the range, not half-fill it.
+    """
+
+    low: float
+    high: float
+    unit: OntologyTerm | None = Field(
+        None, description="Defaults to the measurement's own unit at emit time."
+    )
+
+
 class Quantity(BaseModel):
     """A numeric measurement value with an optional unit."""
 
     value: float
     unit: OntologyTerm | None = None
+    reference_range: ReferenceRange | None = Field(
+        None, description="Per-row normal interval, where the source supplies both bounds."
+    )
 
 
 class TimePoint(BaseModel):
@@ -68,6 +87,22 @@ class DiseaseObservation(BaseModel):
     onset: TimePoint | None = None
 
 
+class ProcedureContext(BaseModel):
+    """How an observation was produced — the GA4GH ``Procedure`` analogue.
+
+    Its reason for existing is ``body_site``: a GA4GH ``Measurement`` has no laterality slot
+    of its own, so a per-eye visual-acuity score can only say which eye via
+    ``Measurement.procedure.body_site``. ``code`` is required because a Procedure carrying
+    only a body site asserts an anatomical site with no act that touched it.
+    """
+
+    code: OntologyTerm = Field(..., description="The act performed, e.g. an NCIT assessment.")
+    body_site: OntologyTerm | None = Field(
+        None, description="Anatomical site, e.g. UBERON:0004549 right eye."
+    )
+    performed: TimePoint | None = None
+
+
 class MeasurementObservation(BaseModel):
     """A quantitative or ordinal measurement — questionnaire scores and items."""
 
@@ -77,6 +112,16 @@ class MeasurementObservation(BaseModel):
         None, description="For categorical/ordinal answers expressed as a term."
     )
     time: TimePoint | None = None
+    description: str | None = Field(
+        None,
+        description=(
+            "Disambiguates two observations sharing one assay — e.g. the first and second "
+            "blood-pressure reading of a visit, which carry the same OMOP concept."
+        ),
+    )
+    procedure: ProcedureContext | None = Field(
+        None, description="Carries body_site/laterality; see ProcedureContext."
+    )
 
 
 class ExternalReference(BaseModel):
@@ -131,4 +176,12 @@ class Participant(BaseModel):
     audio_references: list[str] = Field(
         default_factory=list,
         description="External references to audio/derived features (referenced, not ingested).",
+    )
+    cohort: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Study-design attributes (arm, site, ML split). Recorded as provenance, never "
+            "emitted as a Disease: AI-READI's study_group is a recruitment stratum and "
+            "disagrees with the participant's own condition table."
+        ),
     )

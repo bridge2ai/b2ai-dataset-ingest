@@ -1,0 +1,95 @@
+# Mapping: AI-READI clinical_data/observation.csv, CES-D-10 -> MeasurementObservation (IR)
+#
+# The 10-item Center for Epidemiologic Studies Depression Scale, plus its precomputed total.
+# This is the AI-READI analogue of the Voice PHQ-9 config, and it is deliberately shaped the
+# same way: per-item ordinal Measurements, plus a whole-instrument total where the source
+# ships one.
+#
+# SOURCE. Item keys, untruncated labels and answer scales come from AI-READI's published
+# CC-BY-4.0 crosswalk (scripts/fetch_aireadi_crosswalk.sh). The VUMC synthetic release ships
+# no observation table, so this file is exercised by tests/data/aireadi/ and by
+# `validate-aireadi --strict-coverage` against a real release.
+#
+# LOINC codes verified by exact-code lookup against the NLM Clinical Table LOINC service on
+# 2026-09-10 -- every one of the 11 resolved and its LONG_COMMON_NAME matches the item. That
+# check is not a formality: the same crosswalk proposes `LOINC:2403450` for systolic blood
+# pressure, which resolves to nothing. Codes are verified, never adopted.
+#
+# THE SCALE, AND THE ONE THING THAT WILL BITE A LATER EDITOR
+# ----------------------------------------------------------
+# Eight items are negatively worded and stored 0..3 ascending:
+#     0 Rarely or none of the time (< 1 day)      2 Occasionally (3-4 days)
+#     1 Some or a little of the time (1-2 days)   3 All of the time (5-7 days)
+#
+# `ces5` ("I felt hopeful about the future") and `ces8` ("I was happy") are POSITIVELY worded
+# and the source stores them ALREADY REVERSE-SCORED -- their choice codes run 3,2,1,0 against
+# the same labels. So the stored integer is directionally consistent across all ten items:
+# higher always means more distress. A `>=` cut-point therefore means the same thing on every
+# item, and no reverse-scoring belongs in this pipeline.
+#
+# Do not "fix" that by re-reversing 5 and 8. Verify the choice codes in the crosswalk first
+# (`Choices_Calculations_OR_Slider_Labels`) -- the storage convention is the source's, and a
+# release that changed it would need this comment changed with it.
+#
+# HPO derivation is separate and lives in mappings/b2ai-aireadi-signs-symptoms.sssom.tsv:
+# a value-gated row there derives a PhenotypicFeature from a participant's answer. The
+# recall window is ONE WEEK, which is why only presence is ever asserted (see
+# docs/mapping-conventions.md, "Why absence is not asserted").
+
+table: observation
+delimiter: ","
+id_column: person_id
+key_column: observation_source_value
+date_column: observation_datetime
+visit_column: visit_occurrence_id
+# The resolved ordinal is stored directly; unlike Voice there is no per-item `choices`
+# lookup to do.
+value_columns: [value_as_number]
+
+measures:
+  ces1:
+    assay: { id: "LOINC:100767-3", label: "Bothered by things that are not usually bothersome" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces2:
+    assay: { id: "LOINC:100771-5", label: "Trouble focusing" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces3:
+    assay: { id: "LOINC:100772-3", label: "Feeling depressed" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces4:
+    assay: { id: "LOINC:100773-1", label: "Feeling everything is too much of an effort" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces5:
+    assay: { id: "LOINC:100774-9", label: "Feeling hopeful about the future" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "Positively worded; stored reverse-scored, so a higher value means less hope."
+  ces6:
+    assay: { id: "LOINC:100776-4", label: "Feeling fearful" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces7:
+    assay: { id: "LOINC:100777-2", label: "Restless sleep" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces8:
+    assay: { id: "LOINC:100778-0", label: "Feeling happy" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "Positively worded; stored reverse-scored, so a higher value means less happiness."
+  ces9:
+    assay: { id: "LOINC:100780-6", label: "Feeling lonely" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  ces10:
+    assay: { id: "LOINC:100786-3", label: "Lack of energy" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  # The TOTAL deliberately does NOT carry LOINC:100787-1, even though that code exists and
+  # its long common name is "Total Score CES-D".
+  #
+  # The reason is scope, not existence. NLM knows exactly one CES-D total-score code, and its
+  # name does not say whether it denotes the 10-item short form or the original 20-item
+  # instrument. Those totals have different ranges -- 0-30 versus 0-60 -- so if the code is
+  # the 20-item one, attaching it here would label a 0-30 value with a 0-60 assay, and no
+  # consumer could tell. The item-level codes above are unambiguous and are used; this one is
+  # not, so it ships a project-local id until someone confirms the instrument scope against
+  # LOINC itself.
+  cestl:
+    assay: { id: "b2ai:observation.cestl", label: "CES-D-10 total score" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "Precomputed whole-instrument total (0-30), emitted as the source ships it."

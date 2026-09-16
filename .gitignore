@@ -3,6 +3,13 @@
 /data/*
 !/data/.gitkeep
 
+# Legacy input tree, from before the real/synthetic restructure. Kept ignored on purpose:
+# a checkout that predates the move still has this directory on disk, and it stopped being
+# ignored the moment the old rule was replaced above — so the next `git add -A` stages the
+# whole synthetic tree, licensed AI-READI data included. Observed, not hypothetical.
+# Safe to delete this line once no working copy still carries the directory.
+/data_synth/
+
 # Real Bridge2AI-Voice PhysioNet download — credentialed access, HIPAA/PII-sensitive.
 # Must never be committed or pushed.
 /physionet.org/

@@ -1,0 +1,52 @@
+# Mapping: AI-READI clinical_data/person.csv -> Individual (IR)
+#
+# SOURCE. The VUMC synthetic release ships no person.csv, so this file is authored against
+# the OMOP CDM v5.4 PERSON specification and is exercised by tests/data/aireadi/.
+#
+# SEX MAY BE REDACTED, AND THAT MUST BE VISIBLE. AI-READI states that "information related
+# to the sex and race/ethnicity of the participants as well as medication used has also
+# been removed" from published releases, which means `gender_concept_id` can be 0 on every
+# row. `validate-aireadi` and the ingest report both surface that as a named redaction
+# count, so a run producing nothing but UNKNOWN_SEX subjects cannot be mistaken for a clean
+# run.
+#
+# `"0": null` is the engine's existing recode-to-nothing idiom -- MappingEngine._recode
+# returns the mapped None and individual_fields drops the field -- so a redacted release
+# leaves Individual.sex unset quietly and correctly instead of logging a value_map miss per
+# row. The config is written for a release that DOES carry demographics, so it needs no
+# rewrite when one lands.
+#
+# NOT MAPPED: birth_datetime and month/day_of_birth are sentinels in published releases,
+# and year_of_birth combined with a visit date is a re-identification vector. Age comes
+# from participants.tsv instead.
+#
+# UNVERIFIED: the OMOP gender concept ids 8507/8532 could not be confirmed against a CONCEPT
+# table in this session -- the release ships none and the Athena API returns HTTP 403 from
+# here. They are used ONLY as value_map keys and are never emitted, so a wrong key yields an
+# unset sex rather than a wrong one. Confirm before the full release is ingested.
+
+table: person
+delimiter: ","
+produces: Individual
+id_column: person_id
+
+columns:
+  gender_concept_id:
+    target: Individual.sex
+    value_map:
+      "8507": MALE
+      "8532": FEMALE
+      "0": null            # redacted / no matching concept -> leave Individual.sex unset
+  # Declared second so a populated source value wins by declaration order -- the same
+  # precedence idiom config/voice/demographics.yaml uses for its two sex columns.
+  gender_source_value:
+    target: Individual.sex
+    value_map:
+      Male: MALE
+      male: MALE
+      Female: FEMALE
+      female: FEMALE
+
+# race / ethnicity: DEFERRED. config/shared/value_sets.yaml still records
+# "ethnicity / race codings: TODO (decide ontology - NCIT / HANCESTRO)", and this release
+# carries nothing to map.

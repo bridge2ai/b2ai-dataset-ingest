@@ -110,7 +110,10 @@ class VoiceSource(Source):
     def _conditional_rules(self) -> dict[str, dict[str, list[ConditionalRule]]]:
         """Value-gated B2AI -> HPO rules, loaded once and indexed ``table -> column -> [rules]``."""
         if self._hpo_rules is None:
-            self._hpo_rules = load_conditional_rules(self._mappings)
+            # Scoped to this dataset's sets: rules are indexed by bare table name, so an
+            # unscoped load would let another dataset's gated rules fire on a voice table
+            # that happens to share its name.
+            self._hpo_rules = load_conditional_rules(self._mappings, dataset="voice")
         return self._hpo_rules
 
     def read(self) -> Iterable[Participant]:

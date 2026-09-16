@@ -35,6 +35,59 @@ Common keys: `table` / `table_group` (which source table[s]), `keyed_by`
   The answer→value map is read from the companion data dict's per-item `choices`; an
   `ordinal_scale` map is the fallback when no data dict is present (e.g. test fixtures).
 
+## OMOP long tables (AI-READI)
+
+A dataset delivered as OMOP CDM is long/EAV: a *row* is one observation, so the shapes above
+(`columns:`, `items:`) do not apply. `mapping/omop.py` holds the primitives and
+`config/aireadi/` the configs. Four rules are load-bearing.
+
+- **The item key is the source variable, never `*_concept_id`.** A concept id is the *assay*
+  code and is not unique per item — in AI-READI, concept `3004249` backs both
+  `bp1_sysbp_vsorres` and `bp2_sysbp_vsorres`, and `4047085` backs twenty monofilament sites.
+  The key is the text before the first comma of `<domain>_source_value`.
+- **`*_source_value` is truncated** (49 characters in AI-READI) and its label half is a
+  curator hint, never a label source.
+- **Subjects and assay ids are `b2ai:<omop_table>.<variable>`.** The table qualifier is
+  mandatory because the same variable appears in more than one domain table with a different
+  sense — an AI-READI `mhoccur_hbp` row in `observation` is a self-reported yes/no answer,
+  the same variable in `condition_occurrence` is an asserted condition. The first-dot split
+  the rest of the tooling relies on works unchanged.
+- **`b2ai:` spans the project, not one dataset.** Two datasets must not claim the same
+  `<table>` namespace: `hpo_rules` indexes value-gated rules by bare table name, so a
+  collision would let one dataset's rules fire on another's. Readers scope discovery with
+  `default_mapping_files(dataset=...)` and
+  `tests/test_config_mappings.py::test_sssom_table_names_are_disjoint_across_datasets` is
+  the second lock.
+
+Per-table keys: `table`, `id_column`, `key_column`, `date_column`, `visit_column`,
+`value_columns`, plus one of `conditions:` (item -> MONDO term, as in the Voice diagnosis
+shape) or `measures:` (item -> `{assay, unit, description?, reference_range?,
+procedure_code?, body_site?}`). A `units:` block crosswalks OMOP `unit_concept_id` to UCUM.
+
+**Absence has two meanings, and which applies depends on the column.** `0` is "no matching
+concept" in a `*_concept_id` column but a *valid answer* in `value_as_number`, where on a
+screening instrument it is typically the *modal* answer. Hence two null sets. Source
+refusal codes (`555`/`777`/`888`/`999`) are dropped separately, which is also why a
+`when_value` cut-point over such a scale is written `== n` and never `>= n`.
+
+**Units are declared in config; the data column is a cross-check.** `Quantity.unit` is
+required by the phenopacket schema, and an OMOP release routinely leaves `unit_source_value`
+blank (two thirds of rows in the synthetic AI-READI release), keeping the unit inside the
+truncated label instead.
+
+**Laterality is declared per item, on `Measurement.procedure.body_site`** — the only
+laterality slot a GA4GH `Measurement` has. Do not pass `qualifier_concept_id` through: in
+AI-READI six autorefraction items are per-eye by name with no qualifier at all, and the same
+column on a medical-history row holds a condition name.
+
+**A reference range needs both bounds.** `ReferenceRange.low`/`.high` are proto3 doubles with
+no field presence, so a one-sided range reads back as "the normal range is 39 to 0".
+
+**Timestamps must be RFC3339 with a trailing `Z`.** `TimeElement.timestamp.FromJsonString`
+rejects `2023-12-12`, `2023-12-12 08:19:00` and `2023-12-12T08:19:00` alike, and the emitter
+catches that error and falls back — so an un-normalized value loses every `time_observed`
+without anything failing. Normalize with `omop.to_rfc3339` before building a `TimePoint`.
+
 ## Time
 
 - Every observation gets a `TimePoint` from its `session_id`. The reader attaches an NCIT

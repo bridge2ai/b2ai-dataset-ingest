@@ -1,0 +1,87 @@
+# Mapping: AI-READI participants.tsv -> Individual (IR)
+#
+# The one WIDE table in the release, so it feeds MappingEngine.individual_fields -- the
+# existing `columns:` path -- with no adaptation at all.
+#
+# `age` is age in years on the study-visit day, so the existing years_to_iso8601 transform
+# applies as-is for Individual.age_iso8601. Per-observation ages are DERIVED from it rather
+# than copied -- see the age anchor below.
+#
+# SOURCE. The VUMC synthetic release ships no participants.tsv, so this file is authored
+# against the published Clinical Dataset Structure conventions and the four study arms
+# registered at https://clinicaltrials.gov/study/NCT06002048. It is exercised by
+# tests/data/aireadi/; `validate-aireadi --strict-coverage` against a real release is the
+# check that matters.
+#
+# study_group is a RECRUITMENT STRATUM, not a diagnosis, and the two are not
+# interchangeable: a participant recruited into an arm need not carry the corresponding
+# condition in their own medical history, and vice versa. It is therefore emitted as a
+# categorical Measurement with project-local value terms, never as a Disease.
+
+table: participants
+file: participants.tsv
+delimiter: "\t"
+produces: Individual
+id_column: person_id
+
+# The age anchor. A cohort table records ONE age -- "age in years on the day of the visit"
+# -- while OMOP records a date on every row, so reusing that single value would give every
+# observation the same Age. Under the default age precision a TimeElement renders an age and
+# nothing else, which makes two visits indistinguishable in the output the moment a study
+# stops being cross-sectional. Pairing the age with the date it was measured on lets each
+# observation carry its own derived age.
+#
+# The anchor date is read for the arithmetic ONLY. It is not emitted (see `dropped_columns`
+# below and `time_precision` in dataset.yaml), so this buys per-visit resolution without
+# putting a day-precision date into the output. A release shipping no such date still gets
+# ages -- the anchor then behaves as the constant it is.
+age_column: age
+anchor_date_column: study_visit_date
+
+columns:
+  age:
+    target: Individual.age_iso8601
+    transform: years_to_iso8601        # "73" -> "P73Y"; existing transform, unchanged
+
+# The study arm, as a Measurement. Value terms are project-local: there is no ontology
+# coding for a study's own recruitment arms.
+study_group:
+  source_column: study_group
+  assay: { id: "b2ai:participants.study_group", label: "AI-READI study group" }
+  value_terms:
+    healthy:
+      { id: "b2ai:participants.study_group.healthy", label: "Healthy" }
+    pre_diabetes_lifestyle_controlled:
+      { id: "b2ai:participants.study_group.pre_diabetes_lifestyle_controlled",
+        label: "Pre-diabetes or Type 2 diabetes, lifestyle controlled" }
+    oral_medication_and_or_non_insulin_injectable_medication_controlled:
+      { id: "b2ai:participants.study_group.oral_medication_controlled",
+        label: "Type 2 diabetes, oral and/or non-insulin injectable medication controlled" }
+    insulin_dependent:
+      { id: "b2ai:participants.study_group.insulin_dependent",
+        label: "Type 2 diabetes, insulin dependent" }
+
+# Recorded on Participant.cohort as provenance; not emitted into the phenopacket.
+cohort:
+  columns: [study_group, clinical_site, recommended_split]
+
+# Present and deliberately NOT mapped. Listing them is what lets `validate-aireadi`
+# distinguish "dropped by policy" from "nobody looked".
+dropped_columns:
+  clinical_site: "Site (UW/UCSD/UAB): a cohort attribute and a re-identification
+    quasi-identifier. No phenopacket slot; recorded on Participant.cohort instead."
+  recommended_split: "train/val/test is ML housekeeping, not phenotype."
+  study_visit_date: "Read as the age anchor above, never emitted -- a day-precision date is
+    a HIPAA identifier. See dataset.yaml time_precision."
+  cardiac_ecg: &modality_flag "Modality-availability flag. A flag alone cannot produce a
+    File reference -- the URI needs the dataType/modality/device/<person_id> path, and no
+    release available here ships those directories, so any URI would be fabricated.
+    Full-release handling is deferred; see docs/design/aireadi-ingest.md."
+  clinical_data: *modality_flag
+  environment: *modality_flag
+  retinal_flio: *modality_flag
+  retinal_oct: *modality_flag
+  retinal_octa: *modality_flag
+  retinal_photography: *modality_flag
+  wearable_activity_monitor: *modality_flag
+  wearable_blood_glucose: *modality_flag

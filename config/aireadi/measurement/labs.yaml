@@ -1,0 +1,154 @@
+# Mapping: AI-READI clinical_data/measurement.csv, families import_* and lbscat_* -> MeasurementObservation (IR)
+#
+# 29 central-lab analytes (import_*) and 9 site CBC items (lbscat_*).
+#
+# Reference ranges are opt-in per FAMILY; see `reference_ranges` below.
+#
+# ASSAY IDENTITY. Items with a verified LOINC code carry it; the rest carry a project-local
+# `b2ai:measurement.<item>` id with a curated label. That stopgap is the documented VHI-10
+# precedent already shipping in config/voice/questionnaire/vhi10.yaml (`b2ai:vhi10.total`),
+# and it decouples delivery from the LOINC curation tranche: a later PR replaces `id:` in
+# place and nothing else changes. A `TODO` id would be SKIPPED at read time, which is why
+# none appears here.
+#
+# LOINC codes below were verified by exact-code lookup against the NLM Clinical Table LOINC
+# service on 2026-09-09 -- the same route config/voice/questionnaire/phq9.yaml used. LOINC
+# is deliberately absent from mappings/*.sssom.tsv: oaklib has no usable LOINC build
+# (`sqlite:obo:loinc` resolves to a 0-byte database and raises OperationalError), so a LOINC
+# SSSOM set would sit behind an anti-hallucination gate that cannot actually check it.
+
+# Reference intervals are a property of this FAMILY, not of individual items: a lab result
+# has a normal range, while a cognitive subscore's 0-3 bound is a *scoring* range and not a
+# reference interval at all. Declaring it once here rather than per item means no item
+# carries an observation about which particular analytes a given release happens to report a
+# range for -- an item with no bounds simply emits none.
+#
+# A range is emitted only when BOTH bounds are present: ReferenceRange.low/.high are proto3
+# doubles with no field presence, so a one-sided range reads back as "the normal range is 39
+# to 0". One-sided rows are dropped and counted. The intervals are per ROW, not per item --
+# OMOP carries them on the row precisely because they can be age- and sex-specific.
+reference_ranges: true
+
+table: measurement
+delimiter: ","
+id_column: person_id
+key_column: measurement_source_value
+date_column: measurement_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+
+measures:
+  import_albumin:
+    assay: { id: "LOINC:1751-7", label: "Albumin [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:g/dL", label: "g/dL" }
+  import_alkaline_phosphatase:
+    assay: { id: "LOINC:6768-6", label: "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:[IU]/L", label: "IU/L" }
+  import_alt_got:
+    assay: { id: "LOINC:1742-6", label: "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:[IU]/L", label: "IU/L" }
+  import_ast_got:
+    assay: { id: "LOINC:1920-8", label: "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:[IU]/L", label: "IU/L" }
+  import_bilirubin_total:
+    assay: { id: "LOINC:1975-2", label: "Bilirubin.total [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_bun:
+    assay: { id: "LOINC:3094-0", label: "Urea nitrogen [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_calcium:
+    assay: { id: "LOINC:17861-6", label: "Calcium [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:meq/L", label: "mEq/L" }
+  import_carbon_dioxide_total:
+    assay: { id: "LOINC:2028-9", label: "Carbon dioxide, total [Moles/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:meq/L", label: "mEq/L" }
+  import_chloride:
+    assay: { id: "LOINC:2075-0", label: "Chloride [Moles/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:meq/L", label: "mEq/L" }
+  import_creatinine:
+    assay: { id: "LOINC:2160-0", label: "Creatinine [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_crp_hs:
+    assay: { id: "LOINC:1988-5", label: "C reactive protein [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/L", label: "mg/L" }
+  import_glucose:
+    assay: { id: "LOINC:2345-7", label: "Glucose [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_hba1c:
+    assay: { id: "LOINC:4548-4", label: "Hemoglobin A1c/Hemoglobin.total in Blood" }
+    unit: { id: "UCUM:%", label: "%" }
+  import_hdl_cholesterol:
+    assay: { id: "LOINC:2085-9", label: "Cholesterol in HDL [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_ldl_cholesterol:
+    assay: { id: "LOINC:2089-1", label: "Cholesterol in LDL [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_total_cholesterol:
+    assay: { id: "LOINC:2093-3", label: "Cholesterol [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_triglycerides:
+    assay: { id: "LOINC:2571-8", label: "Triglyceride [Mass/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:mg/dL", label: "mg/dL" }
+  import_potassium:
+    assay: { id: "LOINC:2823-3", label: "Potassium [Moles/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:meq/L", label: "mEq/L" }
+  import_sodium:
+    assay: { id: "LOINC:2951-2", label: "Sodium [Moles/volume] in Serum or Plasma" }
+    unit: { id: "UCUM:meq/L", label: "mEq/L" }
+  import_protein_total:
+    assay: { id: "b2ai:measurement.import_protein_total", label: "Total protein [Mass/volume] in Serum or Plasma" }   # 3020630 -- LOINC not verified yet
+    unit: { id: "UCUM:g/dL", label: "g/dL" }
+  import_globulin_total:
+    assay: { id: "b2ai:measurement.import_globulin_total", label: "Globulin [Mass/volume] in Serum or Plasma" }   # 3021886
+    unit: { id: "UCUM:g/dL", label: "g/dL" }
+  import_a_g_ratio:
+    assay: { id: "b2ai:measurement.import_a_g_ratio", label: "Albumin/Globulin ratio" }   # 4288601
+    unit: { id: "UCUM:1", label: "ratio" }
+  import_buncreatinineratio:
+    assay: { id: "b2ai:measurement.import_buncreatinineratio", label: "BUN/Creatinine ratio" }   # 4112223
+    unit: { id: "UCUM:1", label: "ratio" }
+  import_c_peptide:
+    assay: { id: "b2ai:measurement.import_c_peptide", label: "C peptide [Mass/volume] in Serum or Plasma" }   # 3010084
+    unit: { id: "UCUM:ng/L", label: "ng/L" }
+  import_insulin:
+    assay: { id: "b2ai:measurement.import_insulin", label: "Insulin [Units/volume] in Serum or Plasma" }   # 3016244
+    unit: { id: "UCUM:ng/L", label: "ng/L" }
+  import_nt_probnp:
+    assay: { id: "LOINC:30934-4", label: "Natriuretic peptide B [Mass/volume] in Serum or Plasma" }   # 3029187 -- NT-proBNP; many rows are below the detection limit and are dropped as censored
+    unit: { id: "UCUM:pg/mL", label: "pg/mL" }
+  import_troponin_t:
+    assay: { id: "b2ai:measurement.import_troponin_t", label: "Troponin T.cardiac [Mass/volume] in Serum or Plasma" }   # 40769783
+    unit: { id: "UCUM:ng/L", label: "ng/L" }
+  import_urine_albumin:
+    assay: { id: "b2ai:measurement.import_urine_albumin", label: "Albumin [Mass/volume] in Urine" }   # 3012516 -- source unit cell is mojibake '_g/mL' for ug/mL
+    unit: { id: "UCUM:ug/mL", label: "ug/mL" }
+  import_urine_creatinine:
+    assay: { id: "b2ai:measurement.import_urine_creatinine", label: "Creatinine [Mass/volume] in Urine" }   # 3017250 -- same mojibake
+    unit: { id: "UCUM:ug/mL", label: "ug/mL" }
+  lbscat_a1c:
+    assay: { id: "LOINC:718-7", label: "Hemoglobin [Mass/volume] in Blood" }   # 3000963 -- the ITEM KEY IS MISLEADING: concept 3000963 is Hemoglobin, not HbA1c, and the label says 'Hemoglobin - g/dL'
+    unit: { id: "UCUM:g/dL", label: "g/dL" }
+  lbscat_hct:
+    assay: { id: "LOINC:4544-3", label: "Hematocrit [Volume Fraction] of Blood by Automated count" }   # 3009542
+    unit: { id: "UCUM:%", label: "%" }
+  lbscat_mch:
+    assay: { id: "LOINC:785-6", label: "MCH [Entitic mass] by Automated count" }   # 3035941
+    unit: { id: "UCUM:pg", label: "pg" }
+  lbscat_mchc:
+    assay: { id: "LOINC:786-4", label: "MCHC [Entitic Mass/volume] in Red Blood Cells by Automated count" }   # 3003338
+    unit: { id: "UCUM:g/dL", label: "g/dL" }
+  lbscat_mcv:
+    assay: { id: "LOINC:787-2", label: "MCV [Entitic mean volume] in Red Blood Cells by Automated count" }   # 3024731
+    unit: { id: "UCUM:fL", label: "fL" }
+  lbscat_plt:
+    assay: { id: "LOINC:777-3", label: "Platelets [#/volume] in Blood by Automated count" }   # 3007461
+    unit: { id: "UCUM:10*3/uL", label: "x10E3/uL" }
+  lbscat_rbc:
+    assay: { id: "b2ai:measurement.lbscat_rbc", label: "Erythrocytes [#/volume] in Blood by Automated count" }   # 2005200183 -- AI-READI-local concept
+    unit: { id: "UCUM:10*6/uL", label: "x10E6/uL" }
+  lbscat_rdw:
+    assay: { id: "LOINC:788-0", label: "Erythrocyte [DistWidth] in Blood by Automated count" }   # 3002385
+    unit: { id: "UCUM:%", label: "%" }
+  lbscat_wbc:
+    assay: { id: "LOINC:6690-2", label: "Leukocytes [#/volume] in Blood by Automated count" }   # 2005200182 -- AI-READI-local concept, LOINC verified for the analyte
+    unit: { id: "UCUM:10*3/uL", label: "x10E3/uL" }

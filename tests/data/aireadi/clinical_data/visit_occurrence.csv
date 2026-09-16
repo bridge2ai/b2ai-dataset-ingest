@@ -1,0 +1,6 @@
+"",visit_occurrence_id,person_id,visit_concept_id,visit_start_date,visit_start_datetime,visit_end_date,visit_end_datetime,visit_type_concept_id,visit_source_value
+1,801,900001,9202,2024-01-15,2024-01-15 00:00:00,2024-01-15,2024-01-15 00:00:00,32883,"pacmpdat, Date Assessment Preformed"
+2,802,900001,32036,2024-01-15,2024-01-15 08:30:00,2024-01-15,2024-01-15 08:30:00,32883,"lbdattim2, Date & Time Draw Performed"
+3,803,900002,9202,2024-02-20,2024-02-20 00:00:00,2024-02-20,2024-02-20 00:00:00,32883,"pacmpdat, Date Assessment Preformed"
+4,804,900003,9202,2024-03-05,2024-03-05 00:00:00,2024-03-05,2024-03-05 00:00:00,32883,"pacmpdat, Date Assessment Preformed"
+5,805,900002,9202,2025-04-28,2025-04-28 00:00:00,2025-04-28,2025-04-28 00:00:00,32883,"pacmpdat, Date Assessment Preformed"

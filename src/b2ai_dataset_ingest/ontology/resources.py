@@ -9,8 +9,10 @@ Kept as plain dicts (not protobuf messages) so the ontology layer stays independ
 phenopackets library; the emitter turns these into ``phenopackets.Resource`` messages.
 
 Versions are recorded for provenance; update them when the pinned ontology release changes.
-``b2ai`` is a project-local namespace for questionnaire items that have no public ontology
-code yet (e.g. VHI-10 items) — a documented stopgap, see the questionnaire configs.
+``b2ai`` is a project-local namespace for dataset items that have no public ontology code yet
+(e.g. VHI-10 items, AI-READI lab assays) — a documented stopgap, see the per-dataset configs.
+It spans the *project*, not one dataset; item ids are namespaced by table
+(``b2ai:vhi10.total``, ``b2ai:measurement.import_hba1c``).
 """
 
 from __future__ import annotations
@@ -65,6 +67,17 @@ KNOWN_RESOURCES: dict[str, dict[str, str]] = {
         "namespace_prefix": "NCBITaxon",
         "iri_prefix": "http://purl.obolibrary.org/obo/NCBITaxon_",
     },
+    "UBERON": {
+        "id": "uberon",
+        "name": "Uber-anatomy ontology (UBERON)",
+        "url": "http://purl.obolibrary.org/obo/uberon.owl",
+        # Release reported by EBI OLS4 on 2026-09-09. The local semantic-sql build may lag;
+        # `validate-mappings` warns when a loaded release differs from a file's declared
+        # object_source_version.
+        "version": "2026-06-19",
+        "namespace_prefix": "UBERON",
+        "iri_prefix": "http://purl.obolibrary.org/obo/UBERON_",
+    },
     "UCUM": {
         "id": "ucum",
         "name": "Unified Code for Units of Measure (UCUM)",
@@ -75,7 +88,7 @@ KNOWN_RESOURCES: dict[str, dict[str, str]] = {
     },
     "B2AI": {
         "id": "b2ai",
-        "name": "Bridge2AI-Voice project-local codes (b2ai-dataset-ingest)",
+        "name": "Bridge2AI project-local codes (b2ai-dataset-ingest)",
         "url": "https://github.com/sujaypatil96/b2ai-dataset-ingest",
         "version": "0.0.1",
         "namespace_prefix": "b2ai",

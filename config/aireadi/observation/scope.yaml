@@ -1,0 +1,168 @@
+# Scope policy for AI-READI clinical_data/observation.csv.
+#
+# observation.csv is by far the widest table in the release -- on the order of 355 distinct
+# item keys. Most of them are deliberately not ingested, and this file is where that decision
+# is written down so it is reviewable in a diff rather than inferred from an absence.
+#
+# WHY A DROP LIST EXISTS AT ALL. `validate-aireadi` and the ingest report distinguish two
+# things that look identical in the output: an item nobody has looked at yet
+# (`items_unmapped`) and an item someone decided to leave out (`items_dropped`). Without a
+# drop list every one of these families reads as an oversight, the unmapped count sits in the
+# hundreds, and the number stops meaning anything. With it, `items_unmapped` is a genuine
+# to-do list.
+#
+# Patterns are shell globs, because REDCap names families at both ends: an instrument is a
+# prefix (`rtsm_*`), while the administrative fields it carries are a suffix (`*cmpdat`).
+
+table: observation
+delimiter: ","
+id_column: person_id
+key_column: observation_source_value
+date_column: observation_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+
+drop_rules:
+  # -- administrative, not clinical -------------------------------------------------
+  # NOTE the pattern is `*mpdat`, not `*cmpdat`: the source's own naming is inconsistent --
+  # most instruments use `<name>cmpdat` (paidcmpdat, dmgcmpdat, mhcmpdat) but CES-D-10 uses
+  # `cesmpdat` with a single m. `*mpdat` catches both.
+  "*mpdat": "Instrument completion DATE. Administrative: it records when a form was filled
+    in, not anything about the participant. It is also a day-precision date, which is a HIPAA
+    identifier -- see time_precision in dataset.yaml."
+  "*startts": "Instrument start timestamp (REDCap). Administrative, and finer-grained than
+    any date this pipeline emits."
+  "*cmpts": "Instrument completion timestamp (REDCap). Administrative."
+  "*_metadata": "PhenX survey-administration-mode string (who administered the instrument and
+    how). Provenance about the instrument, not an observation about the participant."
+
+  # -- imaging acquisition flags ------------------------------------------------------
+  # rtop/rtei/rtsm/rtci/rtso/rtma/rttr/rtfl are per-device, per-protocol, per-eye flags
+  # recording that an image WAS CAPTURED. They are not findings: nothing about the retina is
+  # asserted by them, so there is no phenotype to emit.
+  #
+  # They are, however, the only per-participant enumeration of WHICH acquisitions exist, so a
+  # future File-reference layer wants exactly this table: item key -> device + protocol + eye,
+  # with `qualifier_source_value` carrying the laterality. See docs/design/aireadi-ingest.md
+  # on why modality files are deferred (no release available here ships the directories, so
+  # any URI would be fabricated).
+  "rt*": "Retinal imaging acquisition flag -- records that an image was captured, not a
+    finding. Retained as the join key for a future File-reference layer; see the SDD."
+
+  # -- device handout / return ---------------------------------------------------------
+  "dv*": "Wearable/environmental device handout and return logistics (dates, dominant hand,
+    which wrist). Study operations, not phenotype."
+
+  # -- disposition ----------------------------------------------------------------------
+  "eos_*": "End-of-study disposition (completed / discontinued, and the date). Study
+    administration. Note Individual.vital_status is NOT derivable from it: the item records
+    study completion, not survival, and the release ships no death table."
+
+  # -- social determinants ---------------------------------------------------------------
+  # ~100 items across the PhenX modules: racial/ethnic discrimination (pxrd), neighborhood
+  # environment (pxne), health care access (pxahc), health insurance (pxhic), healthcare
+  # discrimination (pxdhc), food insecurity (pxfi), housing/job insecurity, education,
+  # English proficiency, prescription affordability.
+  #
+  # These are real, carefully-instrumented social determinants and they are NOT junk. They
+  # are out of v1 scope because a phenopacket has no honest slot for them: they are neither a
+  # phenotypic feature of the participant nor a measurement of their body, and forcing them
+  # into `Measurement` would assert a clinical finding where the instrument asked about the
+  # participant's environment. Revisiting this needs a modelling decision, not a config line.
+  "px*": "PhenX social-determinants module. Out of v1 scope: a phenopacket has no honest slot
+    for a social determinant, and coercing one into a Measurement would misrepresent it."
+
+  # -- medications ------------------------------------------------------------------------
+  # cm_* are OTC classes taken in the past two weeks (aspirin, ibuprofen, antihistamines...);
+  # cmtrt_* are the four diabetes-treatment modalities (lifestyle / pills / insulin / other
+  # injectable). This is the ONLY treatment signal in the release -- there is no
+  # drug_exposure table.
+  #
+  # They belong in MedicalAction, which needs a Treatment with an agent OntologyClass, which
+  # needs a drug vocabulary (RxNorm/CHEBI) this project has not adopted -- and "lifestyle
+  # changes" has no agent at all. A real gap, deferred deliberately rather than force-fit.
+  "cm_*": "OTC medication class, yes/no. Belongs in MedicalAction; needs a drug vocabulary
+    this project has not adopted yet. Deferred -- see the SDD."
+  "cmtrt_*": "Diabetes treatment modality, yes/no. Same as cm_*; and 'lifestyle changes' has
+    no drug agent at all."
+
+  # -- medical history grid -----------------------------------------------------------------
+  # mhoccur_*/mhterm_*/mh_* are the yes/no grid behind condition_occurrence. The AFFIRMATIVE
+  # answers are already ingested there as Diseases, so ingesting them here would double-count.
+  #
+  # What this table adds that condition_occurrence cannot is the EXPLICIT NEGATIVES -- an
+  # answered "no" rather than an absent row. Those would support `excluded: true` Diseases.
+  # This repo withdrew the absent pole set-wide on clinical review (2026-08-24) because a
+  # questionnaire's lowest answer denies the symptom within the instrument's recall window,
+  # not the phenotype. These items are LIFETIME-scoped ("has a doctor ever told you..."),
+  # which is the documented carve-out in docs/mapping-conventions.md -- so the objection does
+  # not automatically apply, and this is a live question rather than a settled one.
+  #
+  # Left OUT of v1 on purpose: it is still self-report, it would add a large number of
+  # excluded Diseases per packet, and it is the same clinical judgement the reviewer has
+  # already ruled on once. It wants a clinician's sign-off, not a config edit.
+  # LISTED BEFORE `mhoccur_*` ON PURPOSE -- rules are tried in order, and these two are NOT
+  # medical-history condition checkboxes despite sharing the prefix. `mhoccur_fall` asks
+  # "Have you fallen in the last 12 months?" and `mhoccur_fallot` how many times. They have a
+  # 12-month recall window, they are not in condition_occurrence, and the reason attached to
+  # the general rule below would be simply false about them. A prefix is not a family.
+  "mhoccur_fall*": "Falls in the last 12 months, and their count. NOT a medical-history
+    condition checkbox despite the prefix, and not present in condition_occurrence. Falls are
+    a real geriatric outcome and this is INGESTABLE; deferred only because the terms are not
+    curated."
+
+  "mhoccur_*": "Medical-history yes/no. Affirmatives are already Diseases from
+    condition_occurrence; the negatives would need an absent-pole decision -- see the SDD."
+  "mhterm_*": "Medical-history yes/no for the diabetes terms specifically. Same treatment as
+    mhoccur_* -- affirmatives are already Diseases from condition_occurrence."
+  "mh_*": "Medical-history yes/no, remaining items. Same treatment as mhoccur_*; mh_a1c
+    additionally reports a lab finding rather than a diagnosis and belongs in an HPO layer."
+
+  # -- consent and enrolment administration --------------------------------------------------
+  "c184390*": "Paper-consent obtained, and its date. Study administration."
+  "icf*": "Informed-consent form dates, timestamps and attestation. Study administration."
+  "studyid": "The participant's study id -- already Individual.id, and re-emitting it as an
+    observation would put an identifier in a value slot."
+  "visdat": "Planned date and time of the in-person visit. Administrative, and a
+    day-precision date."
+  "lbdattim*": "Date and time clinical labs were performed / the draw was done.
+    Administrative; the lab RESULTS are ingested from measurement.csv."
+
+  # -- demographics duplicated from participants.tsv -------------------------------------------
+  "brthyy": "Year of birth. Not mapped anywhere in this pipeline: year of birth combined with
+    a visit date is a re-identification vector, and age is taken from participants.tsv."
+  "cage": "Age in years, duplicating participants.tsv `age`, which is the age anchor. One
+    source of truth for age -- see participants.yaml."
+  "cl_maristat": "Marital status. A social attribute, not a phenotype; a phenopacket has no
+    slot for it. (Stored as raw NCI Thesaurus codes, if a future model wants it.)"
+
+  # -- device return (names that do not start dv*) ---------------------------------------------
+  "dcvg*": "Dexcom G6 transmitter return. Study operations; see dv* above."
+
+  # -- social determinants with names that do not start px* ------------------------------------
+  "food_insecurity_*": "PhenX food-insecurity follow-up item; see px* above."
+  "pdrx*": "PhenX discrimination stressfulness rating; see px* above."
+
+  # -- medical-history follow-ups --------------------------------------------------------------
+  "mhcat_*": "Medical-history follow-up ('if yes, choose between'). Same treatment as
+    mhoccur_*; a conditional refinement of an item that is itself deferred."
+
+  # -- pre-analytic state -----------------------------------------------------------------------
+  # Genuinely clinical, and genuinely useful -- fasting state is how a reader knows whether a
+  # glucose result is a fasting glucose. Not ingested only because it has no curated term yet.
+  "paate*": "Hours since last eating / anything in the last six hours. Clinically meaningful
+    (it conditions how a glucose result should be read) and INGESTABLE; deferred only because
+    the terms are not curated. A good next candidate."
+
+  # -- remaining survey families not yet curated ---------------------------------------------
+  # Listed so the unmapped count stays a genuine to-do list. Each is a real instrument that
+  # could be ingested; none has had its terms curated yet.
+  "diet*": "Rapid diet screener. Ingestable; terms not yet curated."
+  "dml*": "Diabetes self-management survey. Ingestable; terms not yet curated."
+  "su*": "Substance use (tobacco, alcohol, marijuana, vaping). Ingestable; not yet curated."
+  "via*": "Vision-function questionnaire. Ingestable; not yet curated. Note the ophthalmic
+    MEASUREMENTS of the same name family are ingested from measurement.csv."
+  "dri*": "Driving record. Ingestable; not yet curated."
+  "fh_*": "Family history of Type 2 diabetes. Would need a phenopacket family/pedigree
+    model, which this project does not have."
+  "moca*": "MoCA cognitive assessment. Its subscores live in measurement.csv, not here."

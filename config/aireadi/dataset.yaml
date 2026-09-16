@@ -1,0 +1,39 @@
+# AI-READI (OMOP CDM v5.4, CSV) -> IR. Dataset-level contract.
+#
+# THE ITEM KEY IS THE REDCap VARIABLE -- the text before the FIRST COMMA of
+# <domain>_source_value (the whole string when there is no comma, e.g. "naming").
+#
+# NEVER key on concept_id. Verified on 2026-09-09 against the VUMC synthetic release and
+# AI-READI's published CC-BY-4.0 crosswalk (scripts/fetch_aireadi_crosswalk.sh):
+#   measurement 3004249 backs BOTH bp1_sysbp_vsorres AND bp2_sysbp_vsorres
+#   measurement 3012888 backs BOTH bp1_diabp_vsorres AND bp2_diabp_vsorres
+#   measurement 4239408 backs BOTH pulse_vsorres     AND pulse_vsorres_2
+#   procedure   4047085 backs all 20 monofilament sites
+# Every variable maps to exactly one concept_id, but not the reverse. concept_id is the
+# CONCEPT code and lives only in config comments -- this project mints no OMOP:/SNOMED:
+# prefix, because the release ships no CONCEPT table and 236 of 379 distinct ids are
+# AI-READI-local (>= 2e9) with no public meaning.
+#
+# NEVER key on the LABEL: <domain>_source_value is hard-truncated at 49 characters
+# ("import_albumin, Albumin [Mass/volume] in Serum or"). It is a curator hint, never a
+# label source.
+#
+# Index columns: every CSV carries a leading unnamed pandas index, and measurement.csv /
+# observation.csv carry a second, "X" (the VUMC synthetic release carries only one). They
+# are simply never looked up, so all three shapes parse -- the contract is "required
+# columns are a subset of the header", never header equality.
+
+dataset_id: bridge2ai-aireadi
+dataset_version: "1.0.0"          # dataset_description.json .version
+dataset_doi: "10.60775/fairhub.4"
+
+# age | date | datetime.
+#
+# DEFAULT age: every emitted TimeElement carries an Age, so no date leaves the machine.
+# Day-precision dates are HIPAA identifiers, the AI-READI licence extends to derived
+# output, and dataset_description.json records "deIdentDates": false. `date`/`datetime`
+# are opt-in and normalise to RFC3339-Z -- protobuf's TimeElement.timestamp REJECTS
+# "2023-12-12", "2023-12-12 08:19:00" and "2023-12-12T08:19:00" alike, and the emitter
+# CATCHES that error and falls back silently, so an un-normalised value loses every
+# time_observed without failing. See mapping/omop.py::to_rfc3339.
+time_precision: age

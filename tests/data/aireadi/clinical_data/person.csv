@@ -1,0 +1,4 @@
+"",person_id,gender_concept_id,year_of_birth,month_of_birth,day_of_birth,birth_datetime,race_concept_id,ethnicity_concept_id,gender_source_value
+1,900001,0,1972,0,0,1970-01-01 00:00:00,0,0,
+2,900002,0,1957,0,0,1970-01-01 00:00:00,0,0,
+3,900003,0,1980,0,0,1970-01-01 00:00:00,0,0,

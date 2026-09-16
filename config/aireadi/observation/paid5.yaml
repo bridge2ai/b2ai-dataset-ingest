@@ -1,0 +1,63 @@
+# Mapping: AI-READI clinical_data/observation.csv, PAID-5 -> MeasurementObservation (IR)
+#
+# The five-item Problem Areas In Diabetes short form, a diabetes-distress instrument, plus
+# its precomputed total.
+#
+# SOURCE. Item keys, untruncated labels and the answer scale come from AI-READI's published
+# CC-BY-4.0 crosswalk (scripts/fetch_aireadi_crosswalk.sh).
+#
+# ASSAY IDENTITY. The crosswalk assigns these items AI-READI-local concepts and NO public
+# code (`TARGET_VOCABULARY_ID: AIREADI`, empty `TARGET_CONCEPT_CODE`), so unlike CES-D-10
+# there is no LOINC code to verify. They ship project-local `b2ai:observation.<item>` ids
+# with curated labels -- the documented VHI-10 stopgap already used in
+# config/voice/questionnaire/vhi10.yaml (`b2ai:vhi10.total`). A later PR can replace `id:` in
+# place once codes are found and verified, changing no code.
+#
+# THE SCALE. Five-point, 0..4 ascending, consistent across all five items:
+#     0 Not a problem            3 Somewhat serious problem
+#     1 Minor problem            4 Serious problem
+# Note this is 0-4, NOT the 0-3 of CES-D-10 -- which is exactly why a cut-point is written
+# against an answer LABEL rather than an integer (docs/mapping-conventions.md: "Compare
+# answer labels, never the integers").
+#
+# NO HPO DERIVATION. These items measure distress *about living with diabetes*, not a
+# phenotype: "Feeling depressed when you think about living with diabetes" is a disease-
+# specific appraisal, not the phenotype of depression, and mapping it to a depression term
+# would assert something the item does not ask. They are emitted as Measurements only.
+#
+# THE TOTAL IS EMITTED AS THE SOURCE SHIPS IT, and the source's own formula looks wrong: the
+# published calculation is
+#     sum([paid_scrd],[paid_dpr],[paid_dpr],[paid_wr],[paid_eng],[paid_cml])
+# which sums SIX terms over five items, counting `paid_dpr` twice. This pipeline does not
+# recompute totals -- it emits the stored value, as the Voice VHI-10 config does -- so the
+# stored total is passed through unaltered rather than silently corrected. Flagged here so a
+# consumer comparing the total against the item sum knows why they may differ.
+
+table: observation
+delimiter: ","
+id_column: person_id
+key_column: observation_source_value
+date_column: observation_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+
+measures:
+  paid_scrd:
+    assay: { id: "b2ai:observation.paid_scrd", label: "Feeling scared when you think about living with diabetes" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  paid_dpr:
+    assay: { id: "b2ai:observation.paid_dpr", label: "Feeling depressed when you think about living with diabetes" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  paid_wr:
+    assay: { id: "b2ai:observation.paid_wr", label: "Worrying about the future and the possibility of serious complications" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  paid_eng:
+    assay: { id: "b2ai:observation.paid_eng", label: "Feeling that diabetes is taking up too much mental and physical energy" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  paid_cml:
+    assay: { id: "b2ai:observation.paid_cml", label: "Coping with complications of diabetes" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  paidscore:
+    assay: { id: "b2ai:observation.paidscore", label: "PAID-5 total score" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "Precomputed total, emitted as stored; see the header on the source formula."

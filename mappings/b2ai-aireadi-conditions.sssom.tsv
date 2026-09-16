@@ -1,0 +1,46 @@
+# curie_map:
+#   b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+#   MONDO: http://purl.obolibrary.org/obo/MONDO_
+#   skos: http://www.w3.org/2004/02/skos/core#
+#   semapv: https://w3id.org/semapv/vocab/
+#   github: https://github.com/
+#   obo: http://purl.obolibrary.org/obo/
+# mapping_set_id: https://github.com/sujaypatil96/b2ai-dataset-ingest/mappings/b2ai-aireadi-conditions.sssom.tsv
+# mapping_set_version: '2026-09-09'
+# license: https://creativecommons.org/publicdomain/zero/1.0/
+# mapping_provider: https://github.com/sujaypatil96/b2ai-dataset-ingest
+# creator_id:
+#   - github:sujaypatil96
+# subject_source: aireadi-synthetic/vumc
+# object_source: obo:mondo
+# object_source_version: mondo/releases/2026-05-05
+# mapping_tool: 'oaklib (sqlite:obo:mondo)'
+# mapping_date: '2026-09-09'
+# comment: AI-READI clinical_data/condition_occurrence.csv items mapped to MONDO. Subjects are b2ai:<omop_table>.<redcap_variable>. The OMOP table qualifier is mandatory, not cosmetic - these same variables also appear in observation.csv, where they are a self-reported yes/no answer rather than an asserted condition, so the two senses need distinct ids. Subjects are NOT keyed on concept_id, which is not unique per item. Item keys and concept ids come from the VUMC synthetic AI-READI release (data/synthetic/aireadi/); subject_label is the untruncated label from AI-READI's published CC-BY-4.0 crosswalk, because condition_source_value in the data is hard-truncated at 49 characters and is never usable as a label. That crosswalk is a candidate generator and never an oracle - it carries codes that do not resolve, e.g. LOINC:2403450 for systolic blood pressure - so every object_id here was independently found by searching the pinned MONDO release with oaklib and re-verified id->label. Four of the 30 items are deliberately absent -- three are conflated "A or B" checkboxes that must not broadMatch one sense (mhoccur_ua urinary-infection-or-incontinence, mhoccur_cvdot pacemaker-or-valve-disease-or-surgery, mhoccur_circ arterial-or-venous), and mh_a1c reports a lab finding rather than a diagnosis and belongs in an HPO layer. See docs/mapping-conventions.md.
+subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification	confidence	comment
+b2ai:condition_occurrence.mhoccur_hbp	Hypertensive Disorder	skos:exactMatch	MONDO:0005044	hypertensive disorder	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_clsh	Dyslipidemia	skos:broadMatch	MONDO:0021187	hyperlipidemia	semapv:ManualMappingCuration	0.8	the item asks about "High blood cholesterol" (hypercholesterolemia); MONDO has no hypercholesterolemia term and hyperlipidemia subsumes it
+b2ai:condition_occurrence.mhoccur_ra	Arthritis	skos:broadMatch	MONDO:0006816	arthropathy	semapv:ManualMappingCuration	0.8	item conflates arthritis with joint pain ("Arthritis (joint pain)"); arthropathy has the exact synonym "Joint disorder" and subsumes both senses, so it is broader than the item rather than one sense of it
+b2ai:condition_occurrence.mhterm_dm2	Type 2 diabetes mellitus	skos:exactMatch	MONDO:0005148	type 2 diabetes mellitus	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_obs	Obesity	skos:exactMatch	MONDO:0011122	obesity disorder	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_ded	Dry eyes	skos:exactMatch	MONDO:0006733	dry eye syndrome	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_crt	Bilateral cataracts	skos:exactMatch	MONDO:0005129	cataract	semapv:ManualMappingCuration	0.95	the item asks "Cataracts (in one or both eyes)", i.e. cataract generally; the OMOP concept name "Bilateral cataracts" is narrower than what was asked
+b2ai:condition_occurrence.mhterm_predm	Prediabetes	skos:exactMatch	MONDO:0006920	prediabetes syndrome	semapv:ManualMappingCuration	0.95	MONDO exact synonym "prediabetes"
+b2ai:condition_occurrence.mhoccur_gi	Disorder of digestive system	skos:exactMatch	MONDO:0004335	digestive system disorder	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_ca	Cancer confirmed	skos:exactMatch	MONDO:0004992	cancer	semapv:ManualMappingCuration	0.95	item is "Cancer (any type)" and MONDO:0004992 is malignant neoplasm, so the scope matches
+b2ai:condition_occurrence.mhoccur_ear	Ear anomalies with hearing impairment	skos:exactMatch	MONDO:0005365	hearing loss disorder	semapv:ManualMappingCuration	0.95	the item asks about "Hearing impairment"
+b2ai:condition_occurrence.mhoccur_oa	Osteoporosis	skos:exactMatch	MONDO:0005298	osteoporosis	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_plm	Chronic lung disease	skos:broadMatch	MONDO:0005275	lung disorder	semapv:ManualMappingCuration	0.8	item is "Chronic pulmonary (lung) problems"; MONDO has no chronic-specific lung term, so the general term is broader than the item
+b2ai:condition_occurrence.mhoccur_rnl	Kidney problems	skos:exactMatch	MONDO:0005240	kidney disorder	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_cns	Neurocognitive disorder	skos:broadMatch	MONDO:0005071	nervous system disorder	semapv:ManualMappingCuration	0.8	item is the residual category "Other neurological conditions"; the ontology term subsumes it
+b2ai:condition_occurrence.mhoccur_glc	Glaucoma	skos:exactMatch	MONDO:0005041	glaucoma	semapv:ManualMappingCuration	0.95	the item asks "Glaucoma (in one or both eyes)"; laterality is not part of the concept
+b2ai:condition_occurrence.mhoccur_lbp	Low blood pressure	skos:exactMatch	MONDO:0005468	hypotensive disorder	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_mi	Myocardial infarction	skos:exactMatch	MONDO:0005068	myocardial infarction	semapv:ManualMappingCuration	0.95	item is "Heart attack"
+b2ai:condition_occurrence.mhoccur_strk	Stroke	skos:exactMatch	MONDO:0005098	stroke disorder	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_amd	Age related macular degeneration	skos:exactMatch	MONDO:0005150	age-related macular degeneration	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_pdr	Retinopathy due to diabetes mellitus	skos:exactMatch	MONDO:0005266	diabetic retinopathy	semapv:ManualMappingCuration	0.95	item is "Diabetic retinopathy (in one or both eyes)"
+b2ai:condition_occurrence.mhoccur_cogn	Minimal cognitive impairment	skos:broadMatch	MONDO:0002039	cognitive disorder	semapv:ManualMappingCuration	0.8	item is mild cognitive impairment; MONDO has no MCI term (searched "mild cognitive impairment", "cognitive impairment", "cognitive decline"), so the general term is broader
+b2ai:condition_occurrence.mhoccur_rvo	Retinal vascular occlusion	skos:exactMatch	MONDO:0002089	retinal vascular occlusion	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_pd	Parkinson's disease	skos:exactMatch	MONDO:0005180	Parkinson disease	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_ms	Multiple sclerosis	skos:exactMatch	MONDO:0005301	multiple sclerosis	semapv:ManualMappingCuration	0.95
+b2ai:condition_occurrence.mhoccur_ad	Dementia	skos:exactMatch	MONDO:0001627	dementia	semapv:ManualMappingCuration	0.95	the item is "Dementia (Examples: Alzheimer's Disease...)" - the category, with AD given as an example, so the category term is the match rather than MONDO:0004975 Alzheimer disease

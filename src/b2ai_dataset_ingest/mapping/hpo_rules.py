@@ -79,13 +79,17 @@ class ConditionalRule:
 
 def load_conditional_rules(
     paths: Iterable[Path] | None = None,
+    dataset: str | None = None,
 ) -> dict[str, dict[str, list[ConditionalRule]]]:
     """Load value-gated rules from SSSOM files, indexed ``table -> column -> [rules]``.
 
-    ``paths`` defaults to the shipped ``mappings/*.sssom.tsv``. Rows with an empty ``when_value``
-    (inert semantic mappings) are skipped; malformed rows are logged by subject and skipped.
+    ``paths`` defaults to the shipped ``mappings/`` sets, narrowed to ``dataset`` when given.
+    Callers should pass ``dataset``: the index key is the bare table name, so loading every
+    dataset's sets at once would let one dataset's rules fire on another's same-named table.
+    Rows with an empty ``when_value`` (inert semantic mappings) are skipped; malformed rows
+    are logged by subject and skipped.
     """
-    files = list(paths) if paths is not None else default_mapping_files()
+    files = list(paths) if paths is not None else default_mapping_files(dataset=dataset)
     index: dict[str, dict[str, list[ConditionalRule]]] = {}
     for path in files:
         _, rows = parse_sssom(path)

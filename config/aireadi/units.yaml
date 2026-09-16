@@ -1,0 +1,28 @@
+# OMOP unit_concept_id -> UCUM, plus the UCUM terms the measurement configs declare.
+#
+# Units are declared PER ITEM in the measurement configs and this file is the fallback for
+# rows that carry a unit_concept_id. That precedence is not a preference: unit_source_value
+# is blank, a bare space or "N/A" on 504864 of the 767814 measurement rows in the VUMC
+# synthetic release. Every non-lab family -- vitals, ophthalmic, MoCA -- carries no
+# unit cell at all, keeping its unit inside the 49-character-truncated label
+# ("lbscat_plt, Platelets - x10E3/uL"). A data-first rule would drop three quarters of the
+# table.
+#
+# Quantity.unit is REQUIRED by the phenopacket schema, so a value whose unit resolves to
+# nothing is dropped and counted (units_unmapped) rather than emitted bare.
+#
+# UCUM spellings differ from the display strings the source uses: mEq/L is "meq/L",
+# IU/L is "[IU]/L", mmHg is "mm[Hg]", beats-per-minute is "/min", and a dimensionless
+# ratio is "1". `UCUM:{score}` is the project's existing convention for a unitless
+# instrument score (see mapping/engine.py::SCORE_UNIT).
+
+units:
+  8713: { id: "UCUM:g/dL",    label: "g/dL" }
+  8723: { id: "UCUM:g/L",     label: "g/L" }
+  8725: { id: "UCUM:ng/L",    label: "ng/L" }
+  8751: { id: "UCUM:mg/L",    label: "mg/L" }
+  8840: { id: "UCUM:mg/dL",   label: "mg/dL" }
+  8845: { id: "UCUM:pg/mL",   label: "pg/mL" }
+  8554: { id: "UCUM:%",       label: "%" }
+  8923: { id: "UCUM:[IU]/L",  label: "IU/L" }
+  9557: { id: "UCUM:meq/L",   label: "mEq/L" }

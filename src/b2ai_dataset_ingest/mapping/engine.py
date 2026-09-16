@@ -28,6 +28,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from b2ai_dataset_ingest.mapping.loaders import is_placeholder
 from b2ai_dataset_ingest.model import (
     MeasurementObservation,
     OntologyTerm,
@@ -155,6 +156,17 @@ class MappingEngine:
             raw = (row.get(column) or "").strip()
             if not raw:
                 continue
+            # A placeholder assay must never reach an emitter: `OntologyClass(id="TODO")`
+            # serializes into the packet and MetaData then has no Resource to declare for
+            # it. The diagnosis path already skips placeholders; this is the same rule for
+            # questionnaire/measure items.
+            if is_placeholder(assay):
+                logger.warning(
+                    "%s: item %s has an unresolved ontology term; skipping", table, column
+                )
+                if report is not None:
+                    report.note_placeholder_skipped(table, column)
+                continue
             ordinal = self.ordinal_value(column, raw, data_dict)
             if ordinal is None:
                 # PHI-safe: identify the column, never the raw answer value.
@@ -175,7 +187,11 @@ class MappingEngine:
             )
 
         score = self.mapping.get("score")
-        if isinstance(score, dict):
+        if isinstance(score, dict) and is_placeholder(score.get("assay")):
+            logger.warning("%s: score assay is unresolved; skipping total", table)
+            if report is not None:
+                report.note_placeholder_skipped(table, "score")
+        elif isinstance(score, dict):
             column = score.get("source_column")
             raw = (row.get(column) or "").strip() if column else ""
             if raw:

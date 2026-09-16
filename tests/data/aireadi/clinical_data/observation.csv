@@ -1,0 +1,16 @@
+"",X,observation_id,person_id,observation_concept_id,observation_date,observation_datetime,observation_type_concept_id,value_as_number,value_as_string,value_as_concept_id,qualifier_concept_id,unit_concept_id,visit_occurrence_id,observation_source_value,observation_source_concept_id,unit_source_value,qualifier_source_value,value_source_value,observation_event_id,obs_event_field_concept_id
+1,1,41,900001,1761605,2024-01-15,2024-01-15 00:00:00,32862,0,0.0,2005200141,0,0,801,"ces1, I was bothered by things that usually don't b",0,, , ,0,0
+2,2,42,900001,1761895,2024-01-15,2024-01-15 00:00:00,32862,3,3.0,2005200144,0,0,801,"ces3, I felt depressed",0,, , ,0,0
+3,3,43,900001,1761675,2024-01-15,2024-01-15 00:00:00,32862,3,3.0,2005200144,0,0,801,"ces5, I felt hopeful about the future",0,, , ,0,0
+4,4,44,900001,1761700,2024-01-15,2024-01-15 00:00:00,32862,0,0.0,2005200141,0,0,801,"ces8, I was happy",0,, , ,0,0
+5,5,45,900001,1761347,2024-01-15,2024-01-15 00:00:00,32862,14,14.0,0,0,0,801,"cestl, CESD-10 Score",0,, , ,0,0
+6,6,46,900001,4160030,2024-01-15,2024-01-15 00:00:00,32862,,01/15/24,0,0,0,801,"cesmpdat, CES-D-10 survey date",0,, , ,0,0
+7,7,47,900001,2005200289,2024-01-15,2024-01-15 00:00:00,32862,1,1.0,45877994,45876703,0,801,"rtop_odd, OptoMed-Disc centered-CFP",0,,Right eye, ,0,0
+8,8,48,900002,1761895,2024-02-20,2024-02-20 00:00:00,32862,1,1.0,2005200142,0,0,803,"ces3, I felt depressed",0,, , ,0,0
+9,9,49,900002,1761605,2024-02-20,2024-02-20 00:00:00,32862,999,999.0,0,0,0,803,"ces1, I was bothered by things that usually don't b",0,, , ,0,0
+10,10,50,900002,2005200045,2024-02-20,2024-02-20 00:00:00,32862,4,4.0,0,0,0,803,"paid_dpr, Feeling depressed when you think about li",0,, , ,0,0
+11,11,51,900002,2005200049,2024-02-20,2024-02-20 00:00:00,32862,17,17.0,0,0,0,803,"paidscore, PAID score",0,, , ,0,0
+12,12,52,900003,1761895,2024-03-05,2024-03-05 00:00:00,32862,0,0.0,2005200141,0,0,804,"ces3, I felt depressed",0,, , ,0,0
+13,13,53,900003,9999998,2024-03-05,2024-03-05 00:00:00,32862,1,1.0,0,0,0,804,"zzz_nonesuch, An item no config mentions",0,, , ,0,0
+14,14,54,900001,1761695,2024-01-15,2024-01-15 00:00:00,32862,777,777.0,0,0,0,801,"ces7, My sleep was restless",0,, , ,0,0
+15,15,55,900002,1761695,2024-02-20,2024-02-20 00:00:00,32862,2,2.0,2005200143,0,0,803,"ces7, My sleep was restless",0,, , ,0,0

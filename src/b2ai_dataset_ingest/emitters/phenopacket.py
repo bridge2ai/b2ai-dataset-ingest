@@ -4,7 +4,8 @@ Mapping:
 
     Individual                     -> Phenopacket.subject (Individual)
     DiseaseObservation             -> Phenopacket.diseases (Disease, MONDO term)
-    MeasurementObservation         -> Phenopacket.measurements (Measurement, time_observed)
+    MeasurementObservation         -> Phenopacket.measurements (Measurement, time_observed,
+                                      reference_range, procedure.body_site)
     PhenotypicFeatureObservation   -> Phenopacket.phenotypic_features (PhenotypicFeature)
     TimePoint                      -> TimeElement (timestamp | age | ontologyClass)
     audio_references               -> Phenopacket.files (File, referenced only)
@@ -112,10 +113,17 @@ def _disease(observation) -> pp.Disease:
 
 def _measurement(observation: MeasurementObservation) -> pp.Measurement:
     measurement = pp.Measurement(assay=_ontology_class(observation.assay))
+    if observation.description:
+        measurement.description = observation.description
     if observation.value_quantity is not None:
         quantity = pp.Quantity(value=observation.value_quantity.value)
         if observation.value_quantity.unit is not None:
             quantity.unit.CopyFrom(_ontology_class(observation.value_quantity.unit))
+        reference_range = _reference_range(
+            observation.value_quantity.reference_range, observation.value_quantity.unit
+        )
+        if reference_range is not None:
+            quantity.reference_range.CopyFrom(reference_range)
         measurement.value.CopyFrom(pp.Value(quantity=quantity))
     elif observation.value_term is not None:
         measurement.value.CopyFrom(
@@ -124,7 +132,37 @@ def _measurement(observation: MeasurementObservation) -> pp.Measurement:
     time_element = _time_element(observation.time)
     if time_element is not None:
         measurement.time_observed.CopyFrom(time_element)
+    if observation.procedure is not None:
+        measurement.procedure.CopyFrom(_procedure(observation.procedure))
     return measurement
+
+
+def _reference_range(reference_range, fallback_unit) -> pp.ReferenceRange | None:
+    """Build a ``ReferenceRange``; None when absent.
+
+    ``ReferenceRange.unit`` is required for the range to mean anything, so it falls back to
+    the measurement's own unit — a range in unnamed units is not a range.
+    """
+    if reference_range is None:
+        return None
+    unit = reference_range.unit or fallback_unit
+    if unit is None:
+        logger.warning("reference range has no unit and the value has none either; dropping")
+        return None
+    return pp.ReferenceRange(
+        unit=_ontology_class(unit), low=reference_range.low, high=reference_range.high
+    )
+
+
+def _procedure(context) -> pp.Procedure:
+    """Build a ``Procedure`` — in practice the carrier for ``body_site`` (laterality)."""
+    procedure = pp.Procedure(code=_ontology_class(context.code))
+    if context.body_site is not None:
+        procedure.body_site.CopyFrom(_ontology_class(context.body_site))
+    performed = _time_element(context.performed)
+    if performed is not None:
+        procedure.performed.CopyFrom(performed)
+    return procedure
 
 
 def _phenotypic_feature(observation) -> pp.PhenotypicFeature:

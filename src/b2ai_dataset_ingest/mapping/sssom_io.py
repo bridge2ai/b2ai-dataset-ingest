@@ -53,7 +53,14 @@ def parse_sssom(path: Path) -> tuple[dict[str, Any], list[dict[str, str]]]:
     return metadata, rows
 
 
-def default_mapping_files(repo_root: Path | None = None) -> list[Path]:
-    """The shipped SSSOM files under ``mappings/``."""
+def default_mapping_files(repo_root: Path | None = None, dataset: str | None = None) -> list[Path]:
+    """The shipped SSSOM files under ``mappings/``.
+
+    ``dataset`` narrows the glob to one dataset's sets (``b2ai-<dataset>-*.sssom.tsv``).
+    A reader must pass it: ``load_conditional_rules`` indexes rules by bare table name
+    across every file it is given, so an unscoped load would let one dataset's value-gated
+    rules fire on another dataset's identically-named table.
+    """
     root = repo_root or Path(__file__).resolve().parents[3]
-    return sorted((root / "mappings").glob("*.sssom.tsv"))
+    pattern = f"b2ai-{dataset}-*.sssom.tsv" if dataset else "*.sssom.tsv"
+    return sorted((root / "mappings").glob(pattern))

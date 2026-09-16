@@ -1,0 +1,6 @@
+"",condition_occurrence_id,person_id,condition_concept_id,condition_start_date,condition_start_datetime,condition_end_date,condition_end_datetime,condition_type_concept_id,condition_status_concept_id,stop_reason,visit_occurrence_id,condition_source_value,condition_source_concept_id,condition_status_source_value
+1,11,900001,316866,2024-01-15,2024-01-15 00:00:00,2024-01-15,2024-01-15 00:00:00,45905770,32893,,801,"mhoccur_hbp, High blood pressure",0,
+2,12,900002,201826,2024-02-20,2024-02-20 00:00:00,2024-02-20,2024-02-20 00:00:00,45905770,32893,,803,"mhterm_dm2, Type II Diabetes",0,
+3,13,900002,81902,2024-02-20,2024-02-20 00:00:00,2024-02-20,2024-02-20 00:00:00,45905770,32893,,803,"mhoccur_ua, Urinary problems (Examples: urinary t",0,
+4,14,900002,201826,2024-02-20,2024-02-20 00:00:00,2024-02-20,2024-02-20 00:00:00,45905770,32893,,803,"mhterm_dm2, Type II Diabetes",0,
+5,15,900001,9999999,2024-01-15,2024-01-15 00:00:00,2024-01-15,2024-01-15 00:00:00,45905770,32893,,801,"mhoccur_nonesuch, Not a configured item",0,

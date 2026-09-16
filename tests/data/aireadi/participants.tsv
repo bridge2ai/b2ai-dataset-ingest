@@ -1,0 +1,4 @@
+person_id	clinical_site	study_group	age	study_visit_date	recommended_split	cardiac_ecg	clinical_data
+900001	UW	healthy	52	2024-01-15	train	TRUE	TRUE
+900002	UCSD	insulin_dependent	67	2024-02-20	val	TRUE	TRUE
+900003	UAB	pre_diabetes_lifestyle_controlled	44	2024-03-05	test	TRUE	TRUE

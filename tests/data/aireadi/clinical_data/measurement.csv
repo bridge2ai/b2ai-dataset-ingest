@@ -1,0 +1,17 @@
+"",X,measurement_id,person_id,measurement_concept_id,measurement_date,measurement_datetime,measurement_time,measurement_type_concept_id,operator_concept_id,value_as_number,value_as_concept_id,unit_concept_id,range_low,range_high,visit_occurrence_id,measurement_source_value,measurement_source_concept_id,unit_source_value,unit_source_concept_id,value_source_value,measurement_event_id,meas_event_field_concept_id,qualifier_concept_id,qualifier_source_value
+1,1,21,900001,3004249,2024-01-15,2024-01-15 00:00:00, ,32862,4172703,128.0,0,0,,,801,"bp1_sysbp_vsorres, Systolic (mmHg)",0, ,0,,0,0,0, 
+2,2,22,900001,3004249,2024-01-15,2024-01-15 00:00:00, ,32862,4172703,124.0,0,0,,,801,"bp2_sysbp_vsorres, Systolic (mmHg)",0, ,0,,0,0,0, 
+3,3,23,900001,3004410,2024-01-15,2024-01-15 08:30:00, ,32856,4172703,5.4,0,8554,4.8,5.6,802,"import_hba1c, Hemoglobin A1c/Hemoglobin.total in ",0,%,8554,,0,0,0, 
+4,4,24,900001,3029187,2024-01-15,2024-01-15 08:30:00, ,32856,4171756,36.0,0,8845,,125.0,802,"import_nt_probnp, Natriuretic peptide.B prohormon",0,pg/mL,8845,,0,0,0, 
+5,5,25,900001,2005200042,2024-01-15,2024-01-15 00:00:00, ,32862,0,84.0,0,0,,,801,"viaodplog, VA Letter Score - Photopic VA - OD",0, ,0,,0,0,45876703,Right eye
+6,6,26,900001,2005200043,2024-01-15,2024-01-15 00:00:00, ,32862,0,86.0,0,0,,,801,"viaosplog, VA Letter Score - Photopic VA - OS",0, ,0,,0,0,45883829,Left eye
+7,7,27,900001,3000744,2024-01-15,2024-01-15 00:00:00, ,32862,0,-1.25,0,0,,,801,"viaodsph, OD - Autorefractor - Sphere",0, ,0,,0,0,0, 
+8,8,28,900002,3004410,2024-02-20,2024-02-20 00:00:00, ,32856,4172703,8.1,0,8554,4.8,5.6,803,"import_hba1c, Hemoglobin A1c/Hemoglobin.total in ",0,%,8554,,0,0,0, 
+9,9,29,900002,3012888,2024-02-20,2024-02-20 00:00:00, ,32862,4172703,78.0,0,0,,,0,"bp1_diabp_vsorres, Diastolic (mmHg)",0, ,0,,0,0,0, 
+10,10,30,900002,3016723,2024-02-20,2024-02-20 08:00:00, ,32856,4172703,1.02,0,8840,,1.35,803,"import_creatinine, Creatinine [Mass/volume] in Se",0,mg/dL,8840,,0,0,0, 
+11,11,31,900003,37174522,2024-03-05,2024-03-05 00:00:00, ,32862,0,27.0,0,0,0.0,30.0,804,"moca_total_score",0, ,0,,0,0,0, 
+12,12,32,900003,3004410,2024-03-05,2024-03-05 08:00:00, ,32856,4172703,999.0,0,8554,4.8,5.6,804,"import_hba1c, Hemoglobin A1c/Hemoglobin.total in ",0,%,8554,,0,0,0, 
+13,13,33,900004,3004249,2024-04-01,2024-04-01 00:00:00, ,32862,4172703,118.0,0,0,,,0,"bp1_sysbp_vsorres, Systolic (mmHg)",0, ,0,,0,0,0, 
+14,14,34,900002,3004410,2025-04-28,2025-04-28 08:00:00, ,32856,4172703,7.4,0,8554,4.8,5.6,805,"import_hba1c, Hemoglobin A1c/Hemoglobin.total in ",0,%,8554,,0,0,0, 
+15,15,35,900003,2005200159,2024-03-05,2024-03-05 00:00:00, ,32862,0,10.0,0,0,,,804,"mssrffl, Right Foot - Felt:",0, ,0,,0,0,0, 
+16,16,36,900003,2005200161,2024-03-05,2024-03-05 00:00:00, ,32862,0,7.0,0,0,,,804,"msslffl, Left Foot - Felt:",0, ,0,,0,0,0, 

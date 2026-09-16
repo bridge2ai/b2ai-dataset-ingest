@@ -107,8 +107,12 @@ def is_placeholder(term: Any) -> bool:
 def iter_terms(mapping: dict[str, Any]) -> Iterator[tuple[str, dict[str, Any]]]:
     """Yield ``(context, term_dict)`` for every ``{id, label}`` term in a mapping.
 
-    Understands the shapes used by the voice configs: ``conditions`` (diagnosis),
-    ``items`` and ``score.assay`` / ``score.unit`` (questionnaires).
+    Understands the voice shapes — ``conditions`` (diagnosis), ``items`` and
+    ``score.assay`` / ``score.unit`` (questionnaires) — and the OMOP shapes: ``measures``
+    (per-item ``{assay, unit, procedure_code, body_site}``), ``units`` and ``laterality``.
+
+    A block this function does not walk is a block ``validate_mapping`` cannot warn about,
+    so every new config shape must be added here or its placeholders ship silently.
     """
     for name, term in (mapping.get("conditions") or {}).items():
         yield f"conditions.{name}", term
@@ -120,6 +124,22 @@ def iter_terms(mapping: dict[str, Any]) -> Iterator[tuple[str, dict[str, Any]]]:
             yield "score.assay", score["assay"]
         if "unit" in score:
             yield "score.unit", score["unit"]
+    # OMOP long-table shapes.
+    for name, spec in (mapping.get("measures") or {}).items():
+        if not isinstance(spec, dict):
+            continue
+        for slot in ("assay", "unit", "procedure_code", "body_site"):
+            if isinstance(spec.get(slot), dict):
+                yield f"measures.{name}.{slot}", spec[slot]
+    for block in ("units", "laterality"):
+        for name, term in (mapping.get(block) or {}).items():
+            yield f"{block}.{name}", term
+    study_group = mapping.get("study_group")
+    if isinstance(study_group, dict):
+        if isinstance(study_group.get("assay"), dict):
+            yield "study_group.assay", study_group["assay"]
+        for name, term in (study_group.get("value_terms") or {}).items():
+            yield f"study_group.value_terms.{name}", term
 
 
 def validate_mapping(mapping: dict[str, Any]) -> list[str]:

@@ -19,7 +19,7 @@ raw tables  ->  source reader  ->  YAML mapping engine  ->  canonical IR  ->  em
 | Dataset | Status | Data |
 | --- | --- | --- |
 | [Bridge2AI-Voice](https://bridge2ai.org/data-voice/) | pilot / in progress | real data is PII/credentialed; we develop against public **synthetic** data ([justaddcoffee/b2ai-voice-synthetic-phenotype](https://github.com/justaddcoffee/b2ai-voice-synthetic-phenotype)) |
-| [Bridge2AI AI-READi](https://bridge2ai.org/data-ai-readi/) | planned | no synthetic data yet |
+| [Bridge2AI AI-READi](https://bridge2ai.org/data-ai-readi/) | v1 implemented | clinical data is **OMOP CDM v5.4**; developed against the public [VUMC synthetic release](https://hiplab.vumc.org/synthetix/ai-readi/) plus AI-READI's published CC-BY-4.0 crosswalk, with a committed hand-authored fixture. Nothing AI-READI-derived is committed — see below. |
 
 ## Scope (current)
 
@@ -31,6 +31,16 @@ Phenotype tables only:
 | `diagnosis/` (per-condition files) | → | `Disease` (file basename → MONDO) |
 | `questionnaire/` (PHQ-9, GAD-7, VHI-10) | → | `Measurement` (per-item ordinals + precomputed totals) |
 | audio / derived acoustic features | → | referenced, **not** ingested |
+
+AI-READI (`clinical_data/`, OMOP CDM v5.4 — long/EAV, keyed by `*_concept_id`):
+
+| Source table | → | IR / Phenopacket element |
+| --- | --- | --- |
+| `participants.tsv` + `person.csv` | → | `Individual` (age; sex where a release ships it) + cohort provenance |
+| `visit_occurrence.csv` | → | `TimeElement` (age by default — see the SDD on date precision) |
+| `condition_occurrence.csv` | → | `Disease` (item → MONDO; no onset — the date is the form-fill date) |
+| `measurement.csv` | → | `Measurement` (UCUM units, per-row reference ranges, per-eye `procedure.bodySite`) |
+| `observation.csv`, `procedure_occurrence.csv`, the 8 modality dirs | → | **not** ingested in v1 |
 
 v1 emits `Measurement`s only; HPO `PhenotypicFeature` derivation (which needs an
 ordinal→present/absent threshold policy) is a planned follow-up.
@@ -46,11 +56,12 @@ fixture.)
 ```
 src/b2ai_dataset_ingest/
   model/        canonical, target-neutral intermediate representation (IR)
-  sources/      dataset readers (raw tables -> IR), e.g. sources/voice/
+  sources/      dataset readers (raw tables -> IR): sources/voice/ (wide TSV),
+                sources/aireadi/ (OMOP CDM long CSV)
   mapping/      YAML mapping engine (column -> concept, condition -> MONDO, item -> HPO/LOINC)
   emitters/     output writers; emitters/phenopacket.py is the first target
   ontology/     MONDO/HPO/LOINC term helpers
-config/         per-dataset YAML mappings (config/voice/) + shared value sets
+config/         per-dataset YAML mappings (config/voice/, config/aireadi/) + shared value sets
 mappings/       SSSOM term mappings: B2AI dataset terms (b2ai:) -> HPO, with a validator
 docs/           design docs (SDDs), ADRs, plans, mapping conventions
 examples/       committed sample output: phenopackets built from the synthetic data
@@ -71,7 +82,7 @@ data/synthetic/<dgp>/...       out/synthetic/<dgp>/{phenopackets,analysis}
 
 | | contents | used by the pipeline? |
 | --- | --- | --- |
-| `data/synthetic/` | synthetic Voice phenotype tables; synthetic AI-READI OMOP tables | yes, by default |
+| `data/synthetic/` | synthetic Voice phenotype tables; synthetic AI-READI OMOP tables; AI-READI's CC-BY-4.0 published crosswalk (`scripts/fetch_aireadi_crosswalk.sh`) | yes, by default |
 | `data/real/` | the source datasets (B2AI-Voice, AI-READI `clinical_data`) | only in explicit runs |
 
 Everything routine — tests, fetch scripts, CLI examples — reads from `data/synthetic/`.
@@ -144,6 +155,12 @@ uv run b2ai-ingest validate-mappings  # verify no HPO term is hallucinated / obs
 
 ### Example output (committed)
 
+**There is no AI-READI counterpart, deliberately.** The AI-READI Data License (WashU v2.0)
+extends to data that has been "excerpted or otherwise altered", which covers phenopackets
+derived from the release, and the VUMC synthetic licence bars republishing as a standalone
+dataset. AI-READI is covered instead by a hand-authored, synthetic-by-construction fixture
+under `tests/data/aireadi/` that runs in CI.
+
 `examples/phenopackets/voice-synthetic/` holds 173 phenopackets built from the public
 synthetic Voice data, so downstream tooling can be tested without credentialed access to
 the real dataset. Everything there is synthetic; see its
@@ -156,6 +173,10 @@ known gaps in the snapshot.
 uv sync                       # create the env and install deps
 uv run b2ai-ingest --help     # CLI help
 scripts/fetch_synthetic_data.sh   # pull the public synthetic voice data into data/synthetic/
+
+# AI-READI (OMOP CDM). Preflight first — it is PHI-safe and reports what will be dropped.
+uv run b2ai-ingest validate-aireadi -i tests/data/aireadi -c config/aireadi
+uv run b2ai-ingest aireadi -i tests/data/aireadi -o out/synthetic/aireadi/phenopackets
 ```
 
 ## Development

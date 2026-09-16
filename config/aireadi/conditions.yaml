@@ -1,0 +1,91 @@
+# Mapping: AI-READI clinical_data/condition_occurrence.csv -> DiseaseObservation (IR)
+#
+# 30 distinct item keys. Membership is presence of a row, exactly as a Voice
+# diagnosis/<basename>.tsv row is; the difference is that the condition is named by an item
+# key rather than a filename.
+#
+# SOURCES. Two, and neither is a licensed release:
+#   - item keys, concept ids and row counts: the VUMC synthetic AI-READI release
+#     (data/synthetic/aireadi/, scripts/fetch_aireadi_synthetic.sh) -- 59169 rows over
+#     10414 synthetic participants.
+#   - untruncated labels: AI-READI's own published crosswalk, which is CC-BY-4.0
+#     *documentation* rather than licensed Data (scripts/fetch_aireadi_crosswalk.sh).
+#     condition_source_value in the data is hard-truncated at 49 characters
+#     ("mhoccur_ua, Urinary problems (Examples: urinary t") and is never used as a label.
+#
+# THE CROSSWALK IS A CANDIDATE GENERATOR, NEVER AN ORACLE. It carries codes that do not
+# resolve -- it gives bp1_sysbp_vsorres `LOINC:2403450`, for which the NLM Clinical Table
+# service returns nothing (the real code is 8480-6). So nothing from it is emitted without
+# independent verification: every MONDO CURIE below was found by SEARCHING the pinned MONDO
+# release with oaklib and re-verified id -> label. None was typed from memory.
+#
+# NO ONSET IS EMITTED, and that is a decision rather than an omission.
+# `condition_start_date == condition_end_date` on every row: it records when the
+# medical-history form was filled in, not any onset. Emitting it as `Disease.onset` would
+# assert a false natural history that a downstream consumer could not tell was false.
+#
+# The four TODO entries are deliberate and are skipped at read time with a warning.
+# `mappings/b2ai-aireadi-conditions.sssom.tsv` is the shareable, CI-enforced form of the
+# same 26 decisions.
+
+table: condition_occurrence
+delimiter: ","
+produces: DiseaseObservation
+id_column: person_id
+key_column: condition_source_value
+date_column: condition_start_date
+visit_column: visit_occurrence_id
+emit_onset: false                    # see header; *_start_date is the form-fill date
+
+conditions:
+  mhoccur_hbp:   { id: "MONDO:0005044", label: "hypertensive disorder" }            # 316866      n=5635
+  mhoccur_clsh:  { id: "MONDO:0021187", label: "hyperlipidemia" }                   # 4159131     n=5462
+  mhoccur_ra:    { id: "MONDO:0006816", label: "arthropathy" }                      # 4291025     n=5037
+  mhterm_dm2:    { id: "MONDO:0005148", label: "type 2 diabetes mellitus" }         # 201826      n=4026
+  mhoccur_obs:   { id: "MONDO:0011122", label: "obesity disorder" }                 # 433736      n=4011
+  mhoccur_ded:   { id: "MONDO:0006733", label: "dry eye syndrome" }                 # 4036620     n=3734
+  mhoccur_crt:   { id: "MONDO:0005129", label: "cataract" }                         # 4317977     n=3341
+  mhterm_predm:  { id: "MONDO:0006920", label: "prediabetes syndrome" }             # 37018196    n=2627
+  mhoccur_gi:    { id: "MONDO:0004335", label: "digestive system disorder" }        # 4201745     n=2372
+  mhoccur_ca:    { id: "MONDO:0004992", label: "cancer" }                           # 4194405     n=2083
+  mhoccur_ear:   { id: "MONDO:0005365", label: "hearing loss disorder" }            # 439378      n=1702
+  mhoccur_oa:    { id: "MONDO:0005298", label: "osteoporosis" }                     # 80502       n=1679
+  mhoccur_plm:   { id: "MONDO:0005275", label: "lung disorder" }                    # 4186898     n=1436
+  mhoccur_rnl:   { id: "MONDO:0005240", label: "kidney disorder" }                  # 2005200017  n=1094
+  mhoccur_cns:   { id: "MONDO:0005071", label: "nervous system disorder" }          # 46271045    n=1015
+  mhoccur_glc:   { id: "MONDO:0005041", label: "glaucoma" }                         # 437541      n=896
+  mhoccur_lbp:   { id: "MONDO:0005468", label: "hypotensive disorder" }             # 317002      n=631
+  mhoccur_mi:    { id: "MONDO:0005068", label: "myocardial infarction" }            # 4329847     n=496
+  mhoccur_strk:  { id: "MONDO:0005098", label: "stroke disorder" }                  # 2005200628  n=473
+  mhoccur_amd:   { id: "MONDO:0005150", label: "age-related macular degeneration" } # 374028      n=456
+  mhoccur_pdr:   { id: "MONDO:0005266", label: "diabetic retinopathy" }             # 4174977     n=332
+  mhoccur_cogn:  { id: "MONDO:0002039", label: "cognitive disorder" }               # 439795      n=280
+  # The tail of the prevalence distribution. `n=` is the count in the ~10,400-participant
+  # synthetic release, so these run from 0.9% down to 0.06% -- which means a SUBSET release
+  # will not contain them at all. A 100-participant subset expects 0.9 occurrences of
+  # mhoccur_rvo and 0.1 of mhoccur_ad, and duly ships neither.
+  #
+  # That is sampling, not schema: the items are real and the mapping is right.
+  # `validate-aireadi --strict-coverage` will still flag them as "configured but absent",
+  # because the flag asserts the release is COMPLETE and a subset is not. Expected, and not
+  # a reason to remove them -- dropping a mapping because a small sample lacks the condition
+  # would silently lose it on the full release.
+  mhoccur_rvo:   { id: "MONDO:0002089", label: "retinal vascular occlusion" }       # 440392      n=91
+  mhoccur_pd:    { id: "MONDO:0005180", label: "Parkinson disease" }                # 381270      n=39
+  mhoccur_ms:    { id: "MONDO:0005301", label: "multiple sclerosis" }               # 374919      n=29
+  mhoccur_ad:    { id: "MONDO:0001627", label: "dementia" }                         # 4182210     n=6
+
+  # --- deliberately unmapped; skipped at read time and counted on the report -----------
+  # A conflated "A or B" item must not broadMatch one sense -- that inverts the mapping
+  # direction (docs/mapping-conventions.md). Splitting them needs a curator's call on what
+  # the participant was actually asked, which the item label does not settle.
+  mh_a1c:        { id: "TODO", label: "TODO" }   # 2005200547 n=5375  "Elevated A1C levels" is a
+                                                 #   LAB FINDING, not a diagnosis. Belongs in an
+                                                 #   HPO layer (hyperglycemia), not MONDO.
+  mhoccur_ua:    { id: "TODO", label: "TODO" }   # 81902      n=2458  conflates urinary tract
+                                                 #   infection with incontinence.
+  mhoccur_cvdot: { id: "TODO", label: "TODO" }   # 2005200627 n=1453  conflates pacemaker, valve
+                                                 #   disease and open-heart surgery -- a device,
+                                                 #   a disease and a procedure.
+  mhoccur_circ:  { id: "TODO", label: "TODO" }   # 2005200015 n=900   "Circulation problems
+                                                 #   (arterial/venous)" -- conflated.

@@ -55,6 +55,7 @@ logger = logging.getLogger(__name__)
 OBJECT_SOURCES = {
     "obo:hp": ("HP", "sqlite:obo:hp"),
     "obo:mondo": ("MONDO", "sqlite:obo:mondo"),
+    "obo:uberon": ("UBERON", "sqlite:obo:uberon"),
 }
 
 ALLOWED_PREDICATES = frozenset(
