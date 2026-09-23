@@ -149,8 +149,9 @@ conditions set, and `b2ai-aireadi-measurement.sssom.tsv`, which gates each OMOP
 `measurement.csv` assay on a reference range and asserts the HPO term present beyond it and
 *excluded* inside it (see [docs/mapping-conventions.md](docs/mapping-conventions.md#measured-value-reference-range-mappings)).
 Rows carrying a `when_value` are executed by the readers to derive `PhenotypicFeature`s. Every
-HPO code is machine-verified against a pinned HPO release (via oaklib) so nothing is
-hallucinated; `b2ai-ingest validate-mappings` (and CI) enforce it. See
+ontology code is machine-verified against the release each file declares (fetched from PURL
+and cached under `.ontology-cache/`) so nothing is hallucinated, obsolete or mislabelled;
+`b2ai-ingest validate-mappings` (and CI) enforce it. See
 [docs/mapping-conventions.md](docs/mapping-conventions.md#term-mappings-to-hpo-sssom).
 
 ```bash

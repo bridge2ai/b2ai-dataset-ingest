@@ -158,8 +158,15 @@ is *value-gated*: the pipeline derives a `PhenotypicFeature` from a participant'
   **deprecated** (checked against the `owl:deprecated` flag via `adapter.obsoletes()`, not merely
   the `"obsolete "` label convention — some deprecated terms keep a normal label), and its
   `object_label` must equal the ontology's authoritative label (an *exact* synonym only warns).
-  The validator surfaces each loaded release and warns if one differs from that file's
-  `object_source_version`. It also enforces structure — known predicates, a **self-contained**
+  **The check runs against the release the file declares**: `object_source_version` names a
+  release date, the validator fetches that release's obographs JSON from PURL into
+  `.ontology-cache/` (`ontology/releases.py`; `$B2AI_ONTOLOGY_CACHE` overrides the location)
+  and reads labels, deprecation and exact synonyms from it. So a term the ontology relabels in
+  a later release does not turn a correct file red — that happened on `main` when oaklib's
+  *current* build was the backend and `HP:0011950` was renamed — and every set stays on one
+  pin (`declared_hpo_version()` refuses two). A file declaring no release falls back to
+  oaklib's current build, and the release actually used is surfaced in the report either way.
+  It also enforces structure — known predicates, a **self-contained**
   `curie_map`, in-range confidence, no duplicate triples (across files), well-formed subjects —
   and, when a phenotype data root is supplied, that each `b2ai:` subject names a real data-dict
   column. Run it with `b2ai-ingest validate-mappings` (add `--data-root <phenotype/>` for the

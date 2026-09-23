@@ -33,6 +33,10 @@ dist/
 # Browser-automation scratch (Playwright MCP page/console dumps)
 .playwright-mcp/
 
+# Pinned ontology releases the SSSOM validator fetches from PURL (hp ~22 MB, mondo ~100 MB),
+# keyed <prefix>-<date>.json. Override the location with $B2AI_ONTOLOGY_CACHE.
+/.ontology-cache/
+
 # Stratiphy's downloaded HPO build (~22 MB). Deliberately NOT under data/, whose
 # default it would otherwise take: `stratiphy setup download -d` defaults to ./data,
 # which here is the protected input tree.
