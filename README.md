@@ -141,11 +141,16 @@ Undo with `sudo chown -R "$USER":staff data/real out/real && sudo chmod 755 data
 
 ### Term mappings to HPO (SSSOM)
 
-`mappings/` holds [SSSOM](https://mapping-commons.github.io/sssom/) files mapping Bridge2AI-Voice
-dataset terms (a project-local `b2ai:` namespace) to the Human Phenotype Ontology — a standalone,
-shareable artifact, separate from the ETL configs and not yet consumed by the emitter. Every HPO
-code is machine-verified against a pinned HPO release (via oaklib) so nothing is hallucinated;
-`b2ai-ingest validate-mappings` (and CI) enforce it. See
+`mappings/` holds [SSSOM](https://mapping-commons.github.io/sssom/) files mapping Bridge2AI
+dataset terms (a project-local `b2ai:` namespace) to the Human Phenotype Ontology and MONDO — a
+standalone, shareable artifact, separate from the ETL configs. One file per dataset, domain and
+object ontology: the Voice questionnaire, signs/symptoms and conditions sets, the AI-READI
+conditions set, and `b2ai-aireadi-measurement.sssom.tsv`, which gates each OMOP
+`measurement.csv` assay on a reference range and asserts the HPO term present beyond it and
+*excluded* inside it (see [docs/mapping-conventions.md](docs/mapping-conventions.md#measured-value-reference-range-mappings)).
+Rows carrying a `when_value` are executed by the readers to derive `PhenotypicFeature`s. Every
+HPO code is machine-verified against a pinned HPO release (via oaklib) so nothing is
+hallucinated; `b2ai-ingest validate-mappings` (and CI) enforce it. See
 [docs/mapping-conventions.md](docs/mapping-conventions.md#term-mappings-to-hpo-sssom).
 
 ```bash

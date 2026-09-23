@@ -275,3 +275,83 @@ def test_exact_synonym_warns_but_related_synonym_errors(tmp_path: Path):
     result = validate_paths([path], check_ontology=True)
     assert {f.code for f in result.warnings} & {"noncanonical-label"}
     assert "label-mismatch" in {f.code for f in result.errors}
+
+
+# --------------------------------------------------- measured-value rows (evidence_code)
+
+_MEASURED_COLS = (
+    "subject_id\tsubject_label\tpredicate_id\tpredicate_modifier\tobject_id\tobject_label\t"
+    "mapping_justification\tconfidence\twhen_value\tevidence_code"
+)
+_MEASURED_HEADER = SSSOM_HEADER.replace(
+    "#   HP: http://purl.obolibrary.org/obo/HP_\n",
+    "#   HP: http://purl.obolibrary.org/obo/HP_\n#   ECO: http://purl.obolibrary.org/obo/ECO_\n",
+)
+
+
+def _measured_row(subject, obj, obj_label, when, *, modifier="", evidence="ECO:0007307",
+                  predicate="skos:relatedMatch"):
+    return "\t".join(
+        [subject, "x", predicate, modifier, obj, obj_label, "semapv:ManualMappingCuration",
+         "0.9", when, evidence]
+    )
+
+
+def _write_measured(tmp_path: Path, rows: list[str]) -> Path:
+    path = tmp_path / "measured.sssom.tsv"
+    path.write_text(_MEASURED_HEADER + _MEASURED_COLS + "\n" + "\n".join(rows) + "\n")
+    return path
+
+
+def test_a_measured_value_row_may_gate_on_relatedmatch_and_carry_an_absent_pole(tmp_path: Path):
+    """An assay is not the phenotype, so the predicate is loose; the reference-range gate is
+    what entails the term. Both poles of one assay are distinct rows, not duplicates."""
+    path = _write_measured(
+        tmp_path,
+        [
+            _measured_row("b2ai:measurement.lbscat_hct", "HP:0031851", "Reduced hematocrit", "<37"),
+            _measured_row("b2ai:measurement.lbscat_hct", "HP:0031851", "Reduced hematocrit",
+                          ">=42 & <=47", modifier="Not"),
+        ],
+    )
+    assert not validate_paths([path], check_ontology=False).errors
+
+
+def test_the_same_rules_stay_errors_on_a_self_report_row(tmp_path: Path):
+    """Declaring self-report evidence explicitly changes nothing from declaring none."""
+    path = _write_measured(
+        tmp_path,
+        [
+            _measured_row("b2ai:phq9.no_energy", "HP:0012378", "Fatigue", ">=1",
+                          evidence="ECO:0006160"),
+            _measured_row("b2ai:phq9.no_energy", "HP:0012378", "Fatigue", "==0",
+                          modifier="Not", evidence="ECO:0006160", predicate="skos:exactMatch"),
+        ],
+    )
+    codes = {f.code for f in validate_paths([path], check_ontology=False).errors}
+    assert {"ungateable-predicate", "withdrawn-column"} <= codes
+
+
+def test_an_absent_pole_needs_a_gate_and_a_known_modifier(tmp_path: Path):
+    path = _write_measured(
+        tmp_path,
+        [
+            _measured_row("b2ai:measurement.lbscat_hct", "HP:0031851", "Reduced hematocrit", "",
+                          modifier="Not"),
+            _measured_row("b2ai:measurement.lbscat_plt", "HP:0001873", "Thrombocytopenia",
+                          "<150", modifier="NOT"),
+        ],
+    )
+    codes = {f.code for f in validate_paths([path], check_ontology=False).errors}
+    assert {"ungated-modifier", "bad-predicate-modifier"} <= codes
+
+
+def test_an_unknown_evidence_code_is_an_error(tmp_path: Path):
+    """The apply path can only stamp evidence terms it knows; anything else is refused here."""
+    path = _write_measured(
+        tmp_path,
+        [_measured_row("b2ai:measurement.lbscat_hct", "HP:0031851", "Reduced hematocrit", "<37",
+                       evidence="ECO:0000000")],
+    )
+    codes = {f.code for f in validate_paths([path], check_ontology=False).errors}
+    assert "unknown-evidence-code" in codes

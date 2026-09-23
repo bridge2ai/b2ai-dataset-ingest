@@ -134,3 +134,61 @@ def test_blank_and_unmatched_cells_assert_nothing():
     assert derive_features({"feeling_depressed": ""}, rules, _RESOLVE) == []
     assert derive_features({}, rules, _RESOLVE) == []
     assert derive_features({"feeling_depressed": "Not at all"}, rules, _RESOLVE) == []
+
+
+# ------------------------------------------------ measured-value rows and the absent pole
+
+_MEASURED_COLS = (
+    "subject_id\tsubject_label\tpredicate_id\tpredicate_modifier\tobject_id\tobject_label\t"
+    "mapping_justification\tconfidence\twhen_value\tevidence_code"
+)
+
+
+def _measured(subject, obj, when, *, modifier="", evidence="ECO:0007307"):
+    return "\t".join(
+        [subject, "x", "skos:relatedMatch", modifier, obj, "Reduced hematocrit",
+         "semapv:ManualMappingCuration", "0.9", when, evidence]
+    )
+
+
+def _write_measured(tmp_path: Path, rows: list[str]) -> Path:
+    path = tmp_path / "m.sssom.tsv"
+    path.write_text(HEADER + _MEASURED_COLS + "\n" + "\n".join(rows) + "\n")
+    return path
+
+
+def test_an_absent_pole_row_derives_an_excluded_feature_with_assay_evidence(tmp_path: Path):
+    path = _write_measured(
+        tmp_path,
+        [
+            _measured("b2ai:measurement.lbscat_hct", "HP:0031851", "<37"),
+            _measured("b2ai:measurement.lbscat_hct", "HP:0031851", ">=42 & <=47", modifier="Not"),
+        ],
+    )
+    rules = load_conditional_rules([path])["measurement"]
+    assert [r.excluded for r in rules["lbscat_hct"]] == [False, True]
+
+    low = derive_features({"lbscat_hct": "35.0"}, rules, lambda _c, _r: None)
+    normal = derive_features({"lbscat_hct": "44.0"}, rules, lambda _c, _r: None)
+    assert [f.excluded for f in low] == [False]
+    assert [f.excluded for f in normal] == [True]
+    assert normal[0].evidence[0].evidence_code.id == "ECO:0007307"
+    assert normal[0].description.startswith("Derived absent from measured value of")
+    # The self-report code the Voice sets default to is unchanged.
+    assert SELF_REPORT_EVIDENCE.id == "ECO:0006160"
+
+
+def test_a_modifier_on_a_self_report_row_is_skipped_not_honoured(tmp_path: Path, caplog):
+    """CI rejects it; the apply path must not quietly derive an absence the validator refuses."""
+    path = _write_measured(
+        tmp_path,
+        [
+            _measured("b2ai:phq9.feeling_depressed", "HP:0000716", "==0", modifier="Not",
+                      evidence="ECO:0006160"),
+            _measured("b2ai:phq9.feeling_depressed", "HP:0000716", ">=1", evidence="ECO:9999999"),
+        ],
+    )
+    with caplog.at_level(logging.WARNING):
+        assert load_conditional_rules([path]) == {}
+    assert "predicate_modifier on a self-report row" in caplog.text
+    assert "unknown evidence_code" in caplog.text

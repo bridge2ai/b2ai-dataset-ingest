@@ -1,6 +1,8 @@
 # ADR-0002: Conditional HPO mapping — carry the value-condition in SSSOM, execute in the pipeline
 
-- **Status:** Accepted; decision 3 **withdrawn 2026-08-27** (see *Amended 2026-08-27*)
+- **Status:** Accepted; decision 3 **withdrawn 2026-08-27** for self-report (see *Amended
+  2026-08-27*) and **reinstated 2026-09-23 for measured values only** (see *Amended
+  2026-09-23*)
 - **Date:** 2026-07-23
 
 ## Context
@@ -80,6 +82,24 @@ report and are not yet independently checked (its branch is not in this repo).
 >
 > Decisions 1, 2, 4, 5 and 6 stand. Reinstating absence needs a way to carry the instrument's
 > recall window into the output (e.g. `PhenotypicFeature.onset`), not just a column.
+
+> **Amended 2026-09-23 (measured values).** Decision 3 is **reinstated for measured-value rows
+> only**, and the mechanism is the one the 2026-08-27 amendment asked for. The AI-READI
+> `measurement.csv` set (`mappings/b2ai-aireadi-measurement.sssom.tsv`) gates on a reference
+> range over a dated assay: a value inside the interval rules the abnormality out *at that
+> observation*, and the derived feature carries the measurement's own time, so the exclusion
+> is qualified rather than unbounded. Such rows declare `evidence_code: ECO:0007307` (*direct
+> assay evidence used in automatic assertion*, verified against ECO) and may carry the standard
+> `predicate_modifier: Not`; the emitted feature is `excluded = true` with that evidence term.
+> Two consequences for the validator: (a) the duplicate key is now `(subject, predicate,
+> modifier, object)`, so one assay carries at most one present and one absent row per term;
+> (b) a `relatedMatch` row may gate when its evidence is a measured value, because the
+> phenotype is *defined* by the assay falling outside its range and the gate plus the assay
+> entails the term — a stronger warrant than an endorsement, not a weaker one. Self-report
+> rows are unchanged: the modifier stays an error (`withdrawn-column`) and only `exactMatch`
+> / `broadMatch` gate. Decision 4 extends accordingly: the ECO term stamped on a derived
+> feature is the row's `evidence_code`, so a lab-derived phenotype is never mistaken for
+> self-report. See `docs/mapping-conventions.md`, "Measured-value (reference-range) mappings".
 
 ## Worked example — `b2ai:phq9.feeling_depressed` → HP:5200273 Pathological sadness
 

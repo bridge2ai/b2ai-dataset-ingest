@@ -5,9 +5,10 @@ three layers of checks and returns structured :class:`Finding` objects:
 
 1. **Structural** (always, offline, no deps): required columns, a known ``skos:`` predicate,
    a ``mapping_justification``, a well-formed ``b2ai:<table>.<column>`` subject, a well-formed
-   ``HP:`` object CURIE, in-range ``confidence``, no duplicate ``(subject, predicate, object)``
-   triple (across the whole set), and every CURIE prefix used declared in the file's own
-   ``curie_map`` (self-containment).
+   ``HP:`` object CURIE, in-range ``confidence``, no duplicate ``(subject, predicate,
+   predicate_modifier, object)`` (across the whole set), a known ``evidence_code``, a
+   ``when_value``/``predicate_modifier`` that the row's evidence kind permits, and every CURIE
+   prefix used declared in the file's own ``curie_map`` (self-containment).
 2. **Subject existence** (offline, when a ``data_root`` is given): each ``b2ai:<table>.<column>``
    subject must name a real column in the corresponding data dictionary
    (``<data_root>/**/<table>.json``, via :func:`mapping.loaders.load_data_dict`). Skipped (not
@@ -39,6 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from b2ai_dataset_ingest.mapping.conditions import ConditionParseError, parse_condition
+from b2ai_dataset_ingest.mapping.hpo_rules import EVIDENCE_CODES, is_self_report
 from b2ai_dataset_ingest.mapping.loaders import load_data_dict
 from b2ai_dataset_ingest.mapping.sssom_io import (
     MetadataError,
@@ -68,17 +70,27 @@ ALLOWED_PREDICATES = frozenset(
     }
 )
 REQUIRED_COLUMNS = ("subject_id", "predicate_id", "object_id", "mapping_justification")
-#: Only these predicates may carry a ``when_value``: deriving "the participant has this
-#: phenotype" from an endorsement is sound only when the HPO term is the same as, or broader
-#: than, what the item asked (ADR-0002, amended after clinical review).
+#: Only these predicates may carry a ``when_value`` on a SELF-REPORT row: deriving "the
+#: participant has this phenotype" from an endorsement is sound only when the HPO term is the
+#: same as, or broader than, what the item asked (ADR-0002, amended after clinical review).
 GATEABLE_PREDICATES = frozenset({"skos:exactMatch", "skos:broadMatch"})
-#: Withdrawn after clinical review (2026-08-24): ``predicate_modifier: Not`` asserted an
-#: *unqualified* absence from an answer scoped to the instrument's recall window. Flagged so it
-#: cannot be reintroduced without revisiting that decision (docs/mapping-conventions.md).
-WITHDRAWN_COLUMNS = {
-    "predicate_modifier": "absent poles were withdrawn on clinical review; a questionnaire's "
-    "lowest answer denies the symptom within the instrument's recall window, not the phenotype",
-}
+#: A MEASURED-VALUE row (``evidence_code`` other than self-report) may additionally gate on
+#: ``skos:relatedMatch``: an assay is not the phenotype, so the term-to-term relation is loose,
+#: but the phenotype is *defined* by the assay falling outside its reference range, so the gate
+#: plus the assay entails the term (docs/mapping-conventions.md, "Measured-value mappings").
+MEASURED_GATEABLE_PREDICATES = GATEABLE_PREDICATES | {"skos:relatedMatch"}
+#: Withdrawn after clinical review (2026-08-24) FOR SELF-REPORT ROWS: ``predicate_modifier:
+#: Not`` asserted an *unqualified* absence from an answer scoped to the instrument's recall
+#: window. A measured value is different -- a normal result on a dated assay rules the
+#: abnormality out at that observation, and the derived feature carries that time -- so the
+#: modifier is allowed there and refused here (docs/mapping-conventions.md).
+WITHDRAWN_SELF_REPORT_MODIFIER = (
+    "absent poles were withdrawn for self-report on clinical review; a questionnaire's "
+    "lowest answer denies the symptom within the instrument's recall window, not the "
+    "phenotype. Only a measured-value row (evidence_code ECO:0007307) may carry one"
+)
+#: The one value SSSOM defines for ``predicate_modifier``.
+PREDICATE_MODIFIERS = frozenset({"Not"})
 _RELEASE_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
 
@@ -200,7 +212,7 @@ def _check_row(
     row: dict[str, str],
     fname: str,
     file_prefixes: set[str],
-    seen: set[tuple[str, str, str]],
+    seen: set[tuple[str, str, str, str]],
     object_prefix: str,
 ) -> Iterable[Finding]:
     subj = row.get("subject_id", "").strip()
@@ -228,8 +240,11 @@ def _check_row(
             f"for {object_prefix}), got {obj!r}",
         )
 
+    evidence = row.get("evidence_code", "").strip()
+    modifier = row.get("predicate_modifier", "").strip()
+
     # self-containment: every CURIE used must be declared in this file's own curie_map
-    for curie in (subj, pred, obj, row.get("mapping_justification", "").strip()):
+    for curie in (subj, pred, obj, row.get("mapping_justification", "").strip(), evidence):
         if curie and ":" in curie:
             prefix = curie.split(":", 1)[0]
             if prefix not in file_prefixes:
@@ -244,6 +259,16 @@ def _check_row(
         except ValueError:
             yield err("bad-confidence", f"confidence {conf!r} is not a number")
 
+    # The evidence kind decides which gating rules apply. Absent means self-report (the Voice
+    # sets predate the column); anything else must be a code the apply path knows how to stamp.
+    if evidence and evidence not in EVIDENCE_CODES:
+        yield err(
+            "unknown-evidence-code",
+            f"evidence_code {evidence!r} not in {sorted(EVIDENCE_CODES)}; the apply path "
+            "cannot stamp an evidence term it does not know",
+        )
+    self_report = is_self_report(evidence)
+
     # The value gate (ADR-0002): a parseable when_value, and only on a predicate that can carry
     # one. The validator checks structure only — a cut-point being *clinically* right needs a
     # curator.
@@ -253,15 +278,37 @@ def _check_row(
             parse_condition(when_value)
         except ConditionParseError as exc:
             yield err("bad-when-value", f"when_value {when_value!r} does not parse: {exc}")
-        if pred and pred not in GATEABLE_PREDICATES:
+        gateable = GATEABLE_PREDICATES if self_report else MEASURED_GATEABLE_PREDICATES
+        if pred and pred not in gateable:
             yield err(
                 "ungateable-predicate",
-                f"when_value {when_value!r} on a {pred} row: only {sorted(GATEABLE_PREDICATES)} "
-                "assert a phenotype the item's endorsement actually establishes",
+                f"when_value {when_value!r} on a {pred} row: only {sorted(gateable)} "
+                + (
+                    "assert a phenotype the item's endorsement actually establishes"
+                    if self_report
+                    else "may carry a reference-range gate"
+                ),
+            )
+
+    # The absent pole. Row-level rather than column-level, so one file can carry measured
+    # rows that rule a phenotype out alongside rows that do not.
+    if modifier:
+        if modifier not in PREDICATE_MODIFIERS:
+            yield err(
+                "bad-predicate-modifier",
+                f"predicate_modifier {modifier!r} not in {sorted(PREDICATE_MODIFIERS)}",
+            )
+        if self_report:
+            yield err("withdrawn-column", f"predicate_modifier: {WITHDRAWN_SELF_REPORT_MODIFIER}")
+        elif not when_value:
+            yield err(
+                "ungated-modifier",
+                "predicate_modifier: Not without a when_value asserts nothing; the gate is "
+                "what names the values that rule the phenotype out",
             )
 
     if subj and pred and obj:
-        key = (subj, pred, obj)
+        key = (subj, pred, modifier, obj)
         if key in seen:
             yield err("duplicate", f"duplicate mapping {key}")
         seen.add(key)
@@ -369,7 +416,7 @@ def validate_paths(
                     result.ontology_versions[source] = version
         return backends[source]
 
-    seen: set[tuple[str, str, str]] = set()  # cross-file duplicate detection
+    seen: set[tuple[str, str, str, str]] = set()  # cross-file duplicate detection
     for path in paths:
         fname = path.name
         try:
@@ -397,11 +444,6 @@ def validate_paths(
         result.findings.extend(
             _check_version(metadata, fname, result.ontology_versions.get(source))
         )
-        for column, why in WITHDRAWN_COLUMNS.items():
-            if any(column in row for row in rows):
-                result.findings.append(
-                    Finding(fname, "-", "error", "withdrawn-column", f"column {column!r}: {why}")
-                )
         result.n_rows += len(rows)
         for row in rows:
             result.findings.extend(_check_row(row, fname, file_prefixes, seen, prefix))
