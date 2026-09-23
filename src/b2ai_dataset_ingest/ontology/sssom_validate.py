@@ -13,13 +13,15 @@ three layers of checks and returns structured :class:`Finding` objects:
    subject must name a real column in the corresponding data dictionary
    (``<data_root>/**/<table>.json``, via :func:`mapping.loaders.load_data_dict`). Skipped (not
    failed) when no data root is available; unresolved tables are counted and surfaced.
-3. **Anti-hallucination** (via oaklib's offline SQLite, when available): every ``object_id``
-   must exist, not be deprecated (checked against ``owl:deprecated`` via ``adapter.obsoletes()``
-   -- not merely the ``"obsolete "`` label convention), and its ``object_label`` must equal the
-   ontology's authoritative label (an *exact* synonym only warns). The loaded release is compared
-   to each file's ``object_source_version`` and surfaced, so a green run is auditable and drift is
-   visible. Skipped (not failed) when oaklib/the backend is unavailable, unless ``check_ontology``
-   forces it.
+3. **Anti-hallucination**: every ``object_id`` must exist, not be deprecated (checked against
+   ``owl:deprecated`` via ``adapter.obsoletes()`` -- not merely the ``"obsolete "`` label
+   convention), and its ``object_label`` must equal the ontology's authoritative label (an
+   *exact* synonym only warns). **Checked against the release the file declares**: a file whose
+   ``object_source_version`` names a release date is validated against that release's published
+   obographs JSON (:mod:`ontology.releases`, fetched from PURL and cached), so a relabel in a
+   later release cannot turn a correct file red. A file declaring no release falls back to
+   oaklib's current SQLite build, and the loaded release is surfaced either way. Skipped (not
+   failed) when no backend is available, unless ``check_ontology`` forces it.
 
 **Which ontology a file maps to is the file's own declaration.** Each set names one in its
 ``object_source`` metadata (SSSOM makes it a mapping-*set*-level slot, which is why a MONDO set is
@@ -46,6 +48,12 @@ from b2ai_dataset_ingest.mapping.sssom_io import (
     MetadataError,
     default_mapping_files,
     parse_sssom,
+)
+from b2ai_dataset_ingest.ontology.releases import (
+    PinnedRelease,
+    ReleaseUnavailable,
+    cache_dir,
+    release_date,
 )
 
 logger = logging.getLogger(__name__)
@@ -129,7 +137,7 @@ class ValidationResult:
     def render(self) -> str:
         lines = [f.render() for f in self.findings]
         loaded = ", ".join(f"{s}@{v}" for s, v in sorted(self.ontology_versions.items()))
-        ont = f"ontology=oaklib({loaded or '?'})" if self.ontology_checked else "ontology=SKIPPED"
+        ont = f"ontology={loaded or '?'}" if self.ontology_checked else "ontology=SKIPPED"
 
         subj = "subjects=data-dict" if self.subjects_checked else "subjects=SKIPPED"
         if self.subjects_checked and self.subjects_unresolved:
@@ -393,28 +401,46 @@ def validate_paths(
     """
     result = ValidationResult()
     result.subjects_checked = data_root is not None
-    # One adapter per object ontology actually declared, loaded on first use: a repo that maps
-    # only to HPO must not pay for MONDO, and vice versa.
-    backends: dict[str, tuple[object, set[str]] | None] = {}
+    # One adapter per (object ontology, declared release), loaded on first use: a repo that
+    # maps only to HPO must not pay for MONDO, and two files pinned to the same release share
+    # one load.
+    backends: dict[tuple[str, str | None], tuple[object, set[str]] | None] = {}
 
-    def backend(source: str, prefix: str, selector: str):
-        """(adapter, obsolete ids) for one object ontology, or None if it is unavailable."""
-        if source not in backends:
-            adapter = _get_ontology_adapter(selector) if check_ontology is not False else None
+    def backend(source: str, prefix: str, selector: str, declared: str):
+        """(adapter, obsolete ids) for one object ontology at one release, or None.
+
+        A declared release date selects the pinned obographs build for that date; no date
+        selects oaklib's current build. The distinction is what keeps a correct file green
+        when the ontology relabels a term later.
+        """
+        date = release_date(declared)
+        key = (source, date)
+        if key not in backends:
+            adapter = None
+            if check_ontology is not False:
+                if date:
+                    try:
+                        adapter = PinnedRelease.load(source.split(":", 1)[1], date, cache_dir())
+                    except ReleaseUnavailable as exc:
+                        logger.warning("%s: pinned release unavailable (%s)", source, exc)
+                else:
+                    adapter = _get_ontology_adapter(selector)
             if adapter is None:
-                backends[source] = None
+                backends[key] = None
                 if check_ontology is True:
+                    what = (
+                        f"pinned release {source}@{date}" if date else f"oaklib backend {selector}"
+                    )
                     result.findings.append(
                         Finding("<config>", "-", "error", "no-ontology-backend",
-                                f"oaklib backend {selector} required (--strict-ontology) but "
-                                "unavailable")
+                                f"{what} required (--strict-ontology) but unavailable")
                     )
             else:
-                backends[source] = (adapter, _obsolete_ids(adapter, prefix))
-                version = _adapter_version(adapter)
+                backends[key] = (adapter, _obsolete_ids(adapter, prefix))
+                version = getattr(adapter, "version", None) or _adapter_version(adapter)
                 if version:
                     result.ontology_versions[source] = version
-        return backends[source]
+        return backends[key]
 
     seen: set[tuple[str, str, str, str]] = set()  # cross-file duplicate detection
     for path in paths:
@@ -440,7 +466,8 @@ def validate_paths(
             )
             continue  # without a known source there is no prefix to check rows against
         prefix, selector = OBJECT_SOURCES[source]
-        loaded = backend(source, prefix, selector)
+        declared = str(metadata.get("object_source_version") or "")
+        loaded = backend(source, prefix, selector, declared)
         result.findings.extend(
             _check_version(metadata, fname, result.ontology_versions.get(source))
         )
@@ -458,7 +485,12 @@ def validate_paths(
 
 
 def _check_version(metadata: dict[str, Any], fname: str, loaded: str | None) -> Iterable[Finding]:
-    """Warn if the loaded release differs from the file's declared ``object_source_version``."""
+    """Warn if the loaded release differs from the file's declared ``object_source_version``.
+
+    With the pinned-release backend the two agree by construction; this still fires for a
+    file that declares a version whose release could not be fetched and was checked against
+    a fallback, or whose declared version has no parseable date.
+    """
     declared = str(metadata.get("object_source_version") or "").strip()
     if not declared or not loaded:
         return

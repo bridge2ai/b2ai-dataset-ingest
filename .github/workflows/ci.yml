@@ -45,6 +45,17 @@ jobs:
       - name: Sync dependencies (with validation extra)
         run: uv sync --extra validation
 
+      # The validator checks each file against the ontology release it DECLARES, fetched
+      # once from PURL as obographs JSON (hp ~22 MB, mondo ~100 MB). Cache it so a re-run
+      # does not re-download; the key follows the mapping files because the declared
+      # release is written in their headers.
+      - name: Cache pinned ontology releases
+        uses: actions/cache@v4
+        with:
+          path: .ontology-cache
+          key: ontology-releases-${{ hashFiles('mappings/*.sssom.tsv') }}
+          restore-keys: ontology-releases-
+
       - name: Validate mappings (CLI, strict HPO check)
         run: uv run b2ai-ingest validate-mappings --strict-ontology
 
