@@ -366,13 +366,18 @@ def test_a_per_foot_item_asserts_presence_from_either_side(participants):
 
 
 def test_derived_features_are_counted_after_reconciliation(source_report):
-    """The report counts what the packets carry, not what the rows fired."""
+    """The report counts what the packets carry, not what the rows fired.
+
+    Both tables contribute: measurement-derived features (reconciled) and observation-derived
+    ones, so the count equals the features in the packets, whatever their evidence.
+    """
     packets = {p.individual.id: p for p in AireadiSource(FIXTURE, CONFIG_DIR).read()}
+    carried = sum(len(p.phenotypic_features) for p in packets.values())
     measured = sum(
         1 for p in packets.values() for f in p.phenotypic_features
         if f.evidence and f.evidence[0].evidence_code.id == "ECO:0007307"
     )
-    assert source_report.features_derived == measured > 0
+    assert source_report.features_derived == carried > measured > 0
 
 
 # ---------- reconciliation and the float resolver, in isolation
