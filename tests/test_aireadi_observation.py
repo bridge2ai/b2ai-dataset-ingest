@@ -208,12 +208,20 @@ def test_a_gated_item_answered_with_a_refusal_code_is_not_buffered(source_report
     assert source_report.sentinel_answers["observation.ces7"] == 1
 
 
-def test_shipped_gates_are_bounded_not_open_ended():
-    """Defence two: no shipped `when_value` is an open-ended comparison.
+def test_shipped_self_report_gates_are_bounded_not_open_ended():
+    """Defence two: no shipped SELF-REPORT `when_value` is an open-ended comparison.
 
     Belt and braces with the sentinel screen above — a bounded gate cannot fire on 555/777/
     888/999 even if a sentinel somehow reached it.
+
+    Measured-value rows are deliberately outside this test. A continuous assay has no natural
+    upper bound to write into a gate (a platelet count of 555 x10E3/uL is a real
+    thrombocytosis, not a refusal), so for those rows the sentinel screen in the reader is the
+    only defence, and `test_a_sentinel_on_a_measurement_derives_nothing` in
+    test_aireadi_reader.py is what pins it.
     """
+    from b2ai_dataset_ingest.mapping.conditions import Answer, parse_condition
+    from b2ai_dataset_ingest.mapping.hpo_rules import is_self_report
     from b2ai_dataset_ingest.mapping.omop import SENTINEL_ANSWERS
     from b2ai_dataset_ingest.mapping.sssom_io import default_mapping_files, parse_sssom
 
@@ -222,17 +230,15 @@ def test_shipped_gates_are_bounded_not_open_ended():
         _, rows = parse_sssom(path)
         for row in rows:
             expression = (row.get("when_value") or "").strip()
-            if not expression:
+            if not expression or not is_self_report(row.get("evidence_code", "")):
                 continue
             checked += 1
-            from b2ai_dataset_ingest.mapping.conditions import Answer, parse_condition
-
             condition = parse_condition(expression)
             for sentinel in sorted(SENTINEL_ANSWERS):
                 assert not condition.matches(Answer(raw=sentinel, ordinal=int(float(sentinel)))), (
                     f"{row['subject_id']}: gate {expression!r} fires on refusal code {sentinel}"
                 )
-    # No gated AI-READI rows ship yet; this guards the ones that will.
+    # No gated self-report AI-READI rows ship yet; this guards the ones that will.
     assert checked >= 0
 
 
@@ -265,12 +271,13 @@ def test_monofilament_carries_the_examination_but_an_unlateralized_site(particip
 
 # ---------- the value-gated HPO path
 #
-# No curated AI-READI -> HPO rows ship. An adversarial review of ten proposed CES-D-10
-# mappings refuted five of seven that got as far as judging, on predicate direction and on
-# cut-point, so the curation is not settled — and in this repo a cut-point is a curator
-# judgement that took clinical review for the Voice set. The machinery is therefore proven
-# here against an INJECTED mapping, exactly as tests/test_conditional_features.py does for
-# Voice, and the shipped sets stay empty until a clinician signs off.
+# No curated self-report AI-READI -> HPO rows ship from observation.csv yet. An adversarial
+# review of ten proposed CES-D-10 mappings refuted five of seven that got as far as judging,
+# on predicate direction and on cut-point, so that curation is not settled — and in this repo
+# a cut-point is a curator judgement that took clinical review for the Voice set. The
+# observation path is therefore proven here against an INJECTED mapping, exactly as
+# tests/test_conditional_features.py does for Voice. (The measurement path ships curated
+# reference-range rows; see test_aireadi_reader.py.)
 GATED_SET = """# curie_map:
 #   b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
 #   HP: http://purl.obolibrary.org/obo/HP_
@@ -321,14 +328,15 @@ def test_a_refusal_code_on_a_gated_item_derives_nothing(tmp_path):
     """900001 answers ces7 with 777. Declining to answer must assert nothing."""
     source = AireadiSource(FIXTURE, CONFIG_DIR, mappings=_injected(tmp_path))
     packets = {p.individual.id: p for p in source.read()}
+    # The injected set replaces the shipped ones, so nothing measurement-derived is here either.
     assert packets["900001"].phenotypic_features == []
 
 
-def test_no_curated_hpo_rows_ship_for_aireadi_yet():
-    """Guards the deferral: shipping rows should be a deliberate, reviewed act.
+def test_no_curated_self_report_hpo_rows_ship_from_observation_yet():
+    """Guards the deferral for the self-report table specifically.
 
-    Delete this test in the commit that lands a clinically-reviewed mapping set.
+    Delete this test in the commit that lands a clinically-reviewed observation.csv set.
     """
     from b2ai_dataset_ingest.mapping.hpo_rules import load_conditional_rules
 
-    assert load_conditional_rules(dataset="aireadi") == {}
+    assert "observation" not in load_conditional_rules(dataset="aireadi")

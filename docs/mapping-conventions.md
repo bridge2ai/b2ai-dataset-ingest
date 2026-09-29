@@ -157,8 +157,15 @@ is *value-gated*: the pipeline derives a `PhenotypicFeature` from a participant'
   **deprecated** (checked against the `owl:deprecated` flag via `adapter.obsoletes()`, not merely
   the `"obsolete "` label convention — some deprecated terms keep a normal label), and its
   `object_label` must equal the ontology's authoritative label (an *exact* synonym only warns).
-  The validator surfaces each loaded release and warns if one differs from that file's
-  `object_source_version`. It also enforces structure — known predicates, a **self-contained**
+  **The check runs against the release the file declares**: `object_source_version` names a
+  release date, the validator fetches that release's obographs JSON from PURL into
+  `.ontology-cache/` (`ontology/releases.py`; `$B2AI_ONTOLOGY_CACHE` overrides the location)
+  and reads labels, deprecation and exact synonyms from it. So a term the ontology relabels in
+  a later release does not turn a correct file red — that happened on `main` when oaklib's
+  *current* build was the backend and `HP:0011950` was renamed — and every set stays on one
+  pin (`declared_hpo_version()` refuses two). A file declaring no release falls back to
+  oaklib's current build, and the release actually used is surfaced in the report either way.
+  It also enforces structure — known predicates, a **self-contained**
   `curie_map`, in-range confidence, no duplicate triples (across files), well-formed subjects —
   and, when a phenotype data root is supplied, that each `b2ai:` subject names a real data-dict
   column. Run it with `b2ai-ingest validate-mappings` (add `--data-root <phenotype/>` for the
@@ -179,15 +186,25 @@ value-gated one that derives a `PhenotypicFeature` (per [ADR-0002](adr/0002-cond
   same **ordinal score** the emitted Measurement carries (resolved from the data dict's
   `choices`); string conditions against the raw cell (case-insensitively). An **empty**
   `when_value` is an inert semantic mapping — additive, changing no output.
-- **Only presence is asserted.** There is no `predicate_modifier` column and no
-  `excluded = true`: see *Why absence is not asserted* below. The validator **errors**
-  (`withdrawn-column`) if the column reappears.
-- **Only `skos:exactMatch` and `skos:broadMatch` rows may carry a `when_value`.** Deriving "the
-  participant has this phenotype" from an endorsement is sound only when the HPO term is the same
-  as, or broader than, what the item asked. A `narrowMatch` row says the HPO term is one sub-sense
-  of the item, and an endorsement cannot say which sense was meant; a `relatedMatch` row says
-  neither concept subsumes the other. Both stay inert semantic mappings. Validator:
-  `ungateable-predicate`.
+- **Only presence is asserted from self-report.** A self-report row carries no
+  `predicate_modifier` and derives no `excluded = true`: see *Why absence is not asserted*
+  below. The validator **errors** (`withdrawn-column`) on a `Not` modifier on any self-report
+  row. A *measured-value* row is the one exception, and it is a different kind of evidence —
+  see *Measured-value (reference-range) mappings* below.
+- **Only `skos:exactMatch` and `skos:broadMatch` rows may carry a `when_value`** on a
+  self-report row. Deriving "the participant has this phenotype" from an endorsement is sound
+  only when the HPO term is the same as, or broader than, what the item asked. A `narrowMatch`
+  row says the HPO term is one sub-sense of the item, and an endorsement cannot say which sense
+  was meant; a `relatedMatch` row says neither concept subsumes the other. Both stay inert
+  semantic mappings. Validator: `ungateable-predicate`. (A measured-value row may also gate on
+  `relatedMatch`, for the reason given in that section.)
+- **`evidence_code`** (extension column, optional) names the kind of evidence a gated row
+  derives from, as an ECO CURIE: `ECO:0006160` *self-reported patient statement evidence used
+  in automatic assertion* — the default when the column is absent, which is what every Voice
+  set is — or `ECO:0007307` *direct assay evidence used in automatic assertion* for a measured
+  value. The apply path stamps the matching term on the derived feature's `Evidence`, and the
+  validator refuses any other code (`unknown-evidence-code`): the two lists live together in
+  `mapping/hpo_rules.py::EVIDENCE_CODES` so they cannot drift apart.
 
 #### Choosing a cut-point
 
@@ -257,11 +274,70 @@ All 26 `predicate_modifier: Not` rows are gone, along with the column and the co
 nothing at all — the same as a blank cell.
 
 Reinstating absence needs a way to carry the instrument's recall window into the output (via
-`PhenotypicFeature.onset`, or a term that is genuinely unbounded), not just a column.
+`PhenotypicFeature.onset`, or a term that is genuinely unbounded), not just a column. Measured
+values meet that condition — see the next section — and self-report still does not.
+
+### Measured-value (reference-range) mappings
+
+`mappings/b2ai-aireadi-measurement.sssom.tsv` maps OMOP `measurement.csv` items — lab
+analytes, vitals, anthropometrics, instrumented eye and neuropathy tests — to HPO. These rows
+differ from the questionnaire sets in three ways, and each difference follows from the same
+fact: the subject is an **assay**, not a symptom item, and the phenotype is entailed by the
+*value*, not by an endorsement.
+
+- **The predicate is `skos:relatedMatch`, and it still gates.** An assay is not the phenotype:
+  `Hematocrit [Volume Fraction] of Blood` is not `Reduced hematocrit`, so `exactMatch` would
+  be false and `broadMatch` inverted. But the HPO term is *defined* by the assay falling outside
+  its reference range ("a reduction below the normal ratio of the volume of red blood cells…"),
+  so the assay plus the gate entails the term by definition. That is a stronger warrant than a
+  questionnaire endorsement gives, not a weaker one, which is why the validator admits
+  `relatedMatch` gates on rows carrying `evidence_code: ECO:0007307` and nowhere else.
+- **Absence is asserted.** A normal result on a dated assay rules the abnormality out at that
+  observation, and the derived feature carries the measurement's own time (an age, at the
+  default precision), which is exactly the qualification the self-report withdrawal said was
+  missing. So a measured-value row may carry the standard SSSOM `predicate_modifier: Not`, and
+  the apply path emits `excluded = true`. The validator still errors on the modifier for
+  self-report (`withdrawn-column`), and on a modifier with no gate (`ungated-modifier`) — an
+  ungated `Not` asserts nothing.
+- **Thresholds are a documented choice per row, in `threshold_source`.** In order of
+  preference: the performing lab's published interval; a published general reference
+  (ABIM) where the lab publishes none; a guideline category where the term is
+  category-defined (ACC/AHA blood pressure, NCEP lipids, ADA glycemia, WHO waist/BMI,
+  ICD-11 vision). The OMOP `range_low`/`range_high` columns are not read: they are null-as-zero
+  on every public-release row seen.
+
+Four rules of thumb that recur in that file:
+
+1. **Sex-blind gates.** `Individual.sex` is redacted in the public release. For a sex-split
+   interval the present pole fires only where the value is abnormal for *both* sexes and the
+   absent pole only where it is normal for both; the band between asserts nothing. Age-stratified
+   tables (alkaline phosphatase, NT-proBNP) collapse the same way to their adult extremes.
+   Tighten per sex when sex ships — every such row says so.
+2. **A silent band is deliberate.** Between the present and absent cut-points (AHA "Elevated"
+   120–129 systolic, NCEP "borderline-high", ADA prediabetes 5.7–6.0 % against a lab interval to
+   6.0) neither pole fires. Widening either pole to close the band would assert something one of
+   the two sources denies.
+3. **A per-side item has no absent pole.** Eyes and feet are measured separately and the HPO
+   term is not lateralised, so presence in either side is presence, but a normal side cannot rule
+   out the fellow side.
+4. **Two readings reconcile, presence wins.** Blood pressure and pulse are taken twice under one
+   OMOP concept and each reading gates alone. The reader keeps one feature per term per time and
+   drops an `excluded` that coincides with a `present` for the same term at the same time; the
+   two poles at *different* times are both kept, because that is a change over time.
+
+Measured values are compared as **floats**. The OMOP reader passes a resolver that resolves
+nothing (`_raw_number`) so `conditions` reads the raw cell; the questionnaire resolver
+(`_ordinal_of`) truncates to `int` and would turn `50.5 > 50` into `50 > 50`.
+
+Refusal codes (`555`/`777`/`888`/`999`) are screened in the reader before any gate, and for
+measured values that screen is the only defence: a continuous assay has no natural upper bound
+to write into a gate, and a platelet count of 555 is a real thrombocytosis. The bounded-gate
+requirement therefore applies to self-report rows only.
 
 Declare `when_value` once in the file's SSSOM `extension_definitions` metadata; one
-`subject_id`/`predicate_id`/`object_id` triple carries at most one row, and a repeat is a
-duplicate however its `when_value` differs. Each derived feature is
+`subject_id`/`predicate_id`/`predicate_modifier`/`object_id` combination carries at most one
+row, and a repeat is a duplicate however its `when_value` differs (so a measured-value assay
+has at most one present row and one absent row per term). Each derived feature is
 stamped with provenance: a human-readable `description` and a GA4GH `Evidence` whose
 `evidenceCode` is `ECO:0006160` ("self-reported patient statement … in automatic assertion") with
 an `ExternalReference` back to the source item — self-report-derived phenotypes stay

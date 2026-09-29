@@ -5,20 +5,23 @@ three layers of checks and returns structured :class:`Finding` objects:
 
 1. **Structural** (always, offline, no deps): required columns, a known ``skos:`` predicate,
    a ``mapping_justification``, a well-formed ``b2ai:<table>.<column>`` subject, a well-formed
-   ``HP:`` object CURIE, in-range ``confidence``, no duplicate ``(subject, predicate, object)``
-   triple (across the whole set), and every CURIE prefix used declared in the file's own
-   ``curie_map`` (self-containment).
+   ``HP:`` object CURIE, in-range ``confidence``, no duplicate ``(subject, predicate,
+   predicate_modifier, object)`` (across the whole set), a known ``evidence_code``, a
+   ``when_value``/``predicate_modifier`` that the row's evidence kind permits, and every CURIE
+   prefix used declared in the file's own ``curie_map`` (self-containment).
 2. **Subject existence** (offline, when a ``data_root`` is given): each ``b2ai:<table>.<column>``
    subject must name a real column in the corresponding data dictionary
    (``<data_root>/**/<table>.json``, via :func:`mapping.loaders.load_data_dict`). Skipped (not
    failed) when no data root is available; unresolved tables are counted and surfaced.
-3. **Anti-hallucination** (via oaklib's offline SQLite, when available): every ``object_id``
-   must exist, not be deprecated (checked against ``owl:deprecated`` via ``adapter.obsoletes()``
-   -- not merely the ``"obsolete "`` label convention), and its ``object_label`` must equal the
-   ontology's authoritative label (an *exact* synonym only warns). The loaded release is compared
-   to each file's ``object_source_version`` and surfaced, so a green run is auditable and drift is
-   visible. Skipped (not failed) when oaklib/the backend is unavailable, unless ``check_ontology``
-   forces it.
+3. **Anti-hallucination**: every ``object_id`` must exist, not be deprecated (checked against
+   ``owl:deprecated`` via ``adapter.obsoletes()`` -- not merely the ``"obsolete "`` label
+   convention), and its ``object_label`` must equal the ontology's authoritative label (an
+   *exact* synonym only warns). **Checked against the release the file declares**: a file whose
+   ``object_source_version`` names a release date is validated against that release's published
+   obographs JSON (:mod:`ontology.releases`, fetched from PURL and cached), so a relabel in a
+   later release cannot turn a correct file red. A file declaring no release falls back to
+   oaklib's current SQLite build, and the loaded release is surfaced either way. Skipped (not
+   failed) when no backend is available, unless ``check_ontology`` forces it.
 
 **Which ontology a file maps to is the file's own declaration.** Each set names one in its
 ``object_source`` metadata (SSSOM makes it a mapping-*set*-level slot, which is why a MONDO set is
@@ -39,11 +42,18 @@ from pathlib import Path
 from typing import Any
 
 from b2ai_dataset_ingest.mapping.conditions import ConditionParseError, parse_condition
+from b2ai_dataset_ingest.mapping.hpo_rules import EVIDENCE_CODES, is_self_report
 from b2ai_dataset_ingest.mapping.loaders import load_data_dict
 from b2ai_dataset_ingest.mapping.sssom_io import (
     MetadataError,
     default_mapping_files,
     parse_sssom,
+)
+from b2ai_dataset_ingest.ontology.releases import (
+    PinnedRelease,
+    ReleaseUnavailable,
+    cache_dir,
+    release_date,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,17 +78,27 @@ ALLOWED_PREDICATES = frozenset(
     }
 )
 REQUIRED_COLUMNS = ("subject_id", "predicate_id", "object_id", "mapping_justification")
-#: Only these predicates may carry a ``when_value``: deriving "the participant has this
-#: phenotype" from an endorsement is sound only when the HPO term is the same as, or broader
-#: than, what the item asked (ADR-0002, amended after clinical review).
+#: Only these predicates may carry a ``when_value`` on a SELF-REPORT row: deriving "the
+#: participant has this phenotype" from an endorsement is sound only when the HPO term is the
+#: same as, or broader than, what the item asked (ADR-0002, amended after clinical review).
 GATEABLE_PREDICATES = frozenset({"skos:exactMatch", "skos:broadMatch"})
-#: Withdrawn after clinical review (2026-08-24): ``predicate_modifier: Not`` asserted an
-#: *unqualified* absence from an answer scoped to the instrument's recall window. Flagged so it
-#: cannot be reintroduced without revisiting that decision (docs/mapping-conventions.md).
-WITHDRAWN_COLUMNS = {
-    "predicate_modifier": "absent poles were withdrawn on clinical review; a questionnaire's "
-    "lowest answer denies the symptom within the instrument's recall window, not the phenotype",
-}
+#: A MEASURED-VALUE row (``evidence_code`` other than self-report) may additionally gate on
+#: ``skos:relatedMatch``: an assay is not the phenotype, so the term-to-term relation is loose,
+#: but the phenotype is *defined* by the assay falling outside its reference range, so the gate
+#: plus the assay entails the term (docs/mapping-conventions.md, "Measured-value mappings").
+MEASURED_GATEABLE_PREDICATES = GATEABLE_PREDICATES | {"skos:relatedMatch"}
+#: Withdrawn after clinical review (2026-08-24) FOR SELF-REPORT ROWS: ``predicate_modifier:
+#: Not`` asserted an *unqualified* absence from an answer scoped to the instrument's recall
+#: window. A measured value is different -- a normal result on a dated assay rules the
+#: abnormality out at that observation, and the derived feature carries that time -- so the
+#: modifier is allowed there and refused here (docs/mapping-conventions.md).
+WITHDRAWN_SELF_REPORT_MODIFIER = (
+    "absent poles were withdrawn for self-report on clinical review; a questionnaire's "
+    "lowest answer denies the symptom within the instrument's recall window, not the "
+    "phenotype. Only a measured-value row (evidence_code ECO:0007307) may carry one"
+)
+#: The one value SSSOM defines for ``predicate_modifier``.
+PREDICATE_MODIFIERS = frozenset({"Not"})
 _RELEASE_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
 
@@ -117,7 +137,7 @@ class ValidationResult:
     def render(self) -> str:
         lines = [f.render() for f in self.findings]
         loaded = ", ".join(f"{s}@{v}" for s, v in sorted(self.ontology_versions.items()))
-        ont = f"ontology=oaklib({loaded or '?'})" if self.ontology_checked else "ontology=SKIPPED"
+        ont = f"ontology={loaded or '?'}" if self.ontology_checked else "ontology=SKIPPED"
 
         subj = "subjects=data-dict" if self.subjects_checked else "subjects=SKIPPED"
         if self.subjects_checked and self.subjects_unresolved:
@@ -200,7 +220,7 @@ def _check_row(
     row: dict[str, str],
     fname: str,
     file_prefixes: set[str],
-    seen: set[tuple[str, str, str]],
+    seen: set[tuple[str, str, str, str]],
     object_prefix: str,
 ) -> Iterable[Finding]:
     subj = row.get("subject_id", "").strip()
@@ -228,8 +248,11 @@ def _check_row(
             f"for {object_prefix}), got {obj!r}",
         )
 
+    evidence = row.get("evidence_code", "").strip()
+    modifier = row.get("predicate_modifier", "").strip()
+
     # self-containment: every CURIE used must be declared in this file's own curie_map
-    for curie in (subj, pred, obj, row.get("mapping_justification", "").strip()):
+    for curie in (subj, pred, obj, row.get("mapping_justification", "").strip(), evidence):
         if curie and ":" in curie:
             prefix = curie.split(":", 1)[0]
             if prefix not in file_prefixes:
@@ -244,6 +267,16 @@ def _check_row(
         except ValueError:
             yield err("bad-confidence", f"confidence {conf!r} is not a number")
 
+    # The evidence kind decides which gating rules apply. Absent means self-report (the Voice
+    # sets predate the column); anything else must be a code the apply path knows how to stamp.
+    if evidence and evidence not in EVIDENCE_CODES:
+        yield err(
+            "unknown-evidence-code",
+            f"evidence_code {evidence!r} not in {sorted(EVIDENCE_CODES)}; the apply path "
+            "cannot stamp an evidence term it does not know",
+        )
+    self_report = is_self_report(evidence)
+
     # The value gate (ADR-0002): a parseable when_value, and only on a predicate that can carry
     # one. The validator checks structure only — a cut-point being *clinically* right needs a
     # curator.
@@ -253,15 +286,37 @@ def _check_row(
             parse_condition(when_value)
         except ConditionParseError as exc:
             yield err("bad-when-value", f"when_value {when_value!r} does not parse: {exc}")
-        if pred and pred not in GATEABLE_PREDICATES:
+        gateable = GATEABLE_PREDICATES if self_report else MEASURED_GATEABLE_PREDICATES
+        if pred and pred not in gateable:
             yield err(
                 "ungateable-predicate",
-                f"when_value {when_value!r} on a {pred} row: only {sorted(GATEABLE_PREDICATES)} "
-                "assert a phenotype the item's endorsement actually establishes",
+                f"when_value {when_value!r} on a {pred} row: only {sorted(gateable)} "
+                + (
+                    "assert a phenotype the item's endorsement actually establishes"
+                    if self_report
+                    else "may carry a reference-range gate"
+                ),
+            )
+
+    # The absent pole. Row-level rather than column-level, so one file can carry measured
+    # rows that rule a phenotype out alongside rows that do not.
+    if modifier:
+        if modifier not in PREDICATE_MODIFIERS:
+            yield err(
+                "bad-predicate-modifier",
+                f"predicate_modifier {modifier!r} not in {sorted(PREDICATE_MODIFIERS)}",
+            )
+        if self_report:
+            yield err("withdrawn-column", f"predicate_modifier: {WITHDRAWN_SELF_REPORT_MODIFIER}")
+        elif not when_value:
+            yield err(
+                "ungated-modifier",
+                "predicate_modifier: Not without a when_value asserts nothing; the gate is "
+                "what names the values that rule the phenotype out",
             )
 
     if subj and pred and obj:
-        key = (subj, pred, obj)
+        key = (subj, pred, modifier, obj)
         if key in seen:
             yield err("duplicate", f"duplicate mapping {key}")
         seen.add(key)
@@ -346,30 +401,48 @@ def validate_paths(
     """
     result = ValidationResult()
     result.subjects_checked = data_root is not None
-    # One adapter per object ontology actually declared, loaded on first use: a repo that maps
-    # only to HPO must not pay for MONDO, and vice versa.
-    backends: dict[str, tuple[object, set[str]] | None] = {}
+    # One adapter per (object ontology, declared release), loaded on first use: a repo that
+    # maps only to HPO must not pay for MONDO, and two files pinned to the same release share
+    # one load.
+    backends: dict[tuple[str, str | None], tuple[object, set[str]] | None] = {}
 
-    def backend(source: str, prefix: str, selector: str):
-        """(adapter, obsolete ids) for one object ontology, or None if it is unavailable."""
-        if source not in backends:
-            adapter = _get_ontology_adapter(selector) if check_ontology is not False else None
+    def backend(source: str, prefix: str, selector: str, declared: str):
+        """(adapter, obsolete ids) for one object ontology at one release, or None.
+
+        A declared release date selects the pinned obographs build for that date; no date
+        selects oaklib's current build. The distinction is what keeps a correct file green
+        when the ontology relabels a term later.
+        """
+        date = release_date(declared)
+        key = (source, date)
+        if key not in backends:
+            adapter = None
+            if check_ontology is not False:
+                if date:
+                    try:
+                        adapter = PinnedRelease.load(source.split(":", 1)[1], date, cache_dir())
+                    except ReleaseUnavailable as exc:
+                        logger.warning("%s: pinned release unavailable (%s)", source, exc)
+                else:
+                    adapter = _get_ontology_adapter(selector)
             if adapter is None:
-                backends[source] = None
+                backends[key] = None
                 if check_ontology is True:
+                    what = (
+                        f"pinned release {source}@{date}" if date else f"oaklib backend {selector}"
+                    )
                     result.findings.append(
                         Finding("<config>", "-", "error", "no-ontology-backend",
-                                f"oaklib backend {selector} required (--strict-ontology) but "
-                                "unavailable")
+                                f"{what} required (--strict-ontology) but unavailable")
                     )
             else:
-                backends[source] = (adapter, _obsolete_ids(adapter, prefix))
-                version = _adapter_version(adapter)
+                backends[key] = (adapter, _obsolete_ids(adapter, prefix))
+                version = getattr(adapter, "version", None) or _adapter_version(adapter)
                 if version:
                     result.ontology_versions[source] = version
-        return backends[source]
+        return backends[key]
 
-    seen: set[tuple[str, str, str]] = set()  # cross-file duplicate detection
+    seen: set[tuple[str, str, str, str]] = set()  # cross-file duplicate detection
     for path in paths:
         fname = path.name
         try:
@@ -393,15 +466,11 @@ def validate_paths(
             )
             continue  # without a known source there is no prefix to check rows against
         prefix, selector = OBJECT_SOURCES[source]
-        loaded = backend(source, prefix, selector)
+        declared = str(metadata.get("object_source_version") or "")
+        loaded = backend(source, prefix, selector, declared)
         result.findings.extend(
             _check_version(metadata, fname, result.ontology_versions.get(source))
         )
-        for column, why in WITHDRAWN_COLUMNS.items():
-            if any(column in row for row in rows):
-                result.findings.append(
-                    Finding(fname, "-", "error", "withdrawn-column", f"column {column!r}: {why}")
-                )
         result.n_rows += len(rows)
         for row in rows:
             result.findings.extend(_check_row(row, fname, file_prefixes, seen, prefix))
@@ -416,7 +485,12 @@ def validate_paths(
 
 
 def _check_version(metadata: dict[str, Any], fname: str, loaded: str | None) -> Iterable[Finding]:
-    """Warn if the loaded release differs from the file's declared ``object_source_version``."""
+    """Warn if the loaded release differs from the file's declared ``object_source_version``.
+
+    With the pinned-release backend the two agree by construction; this still fires for a
+    file that declares a version whose release could not be fetched and was checked against
+    a fallback, or whose declared version has no parseable date.
+    """
     declared = str(metadata.get("object_source_version") or "").strip()
     if not declared or not loaded:
         return

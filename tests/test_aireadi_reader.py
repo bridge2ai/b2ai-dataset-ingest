@@ -283,3 +283,131 @@ def test_fixture_carries_no_real_looking_person_id():
                 assert person_id.startswith("9000"), (
                     f"{path.name} carries {person_id!r}, which is not a 9000xx fixture id"
                 )
+
+
+# ---------- the value-gated HPO path over measurement.csv
+#
+# The shipped set mappings/b2ai-aireadi-measurement.sssom.tsv is reference-range gated: a
+# value beyond the interval asserts the phenotype, a value inside it rules the phenotype
+# out (predicate_modifier Not -> excluded). Every fixture row below was written for one of these.
+
+
+def _features(packet):
+    return {(f.type.id, f.excluded) for f in packet.phenotypic_features}
+
+
+def test_a_lab_value_beyond_its_interval_asserts_the_phenotype(participants):
+    """900002's HbA1c of 8.1 is above the 6.0 upper bound -> Elevated hemoglobin A1c."""
+    assert ("HP:0040217", False) in _features(participants["900002"])
+
+
+def test_a_lab_value_inside_its_interval_rules_the_phenotype_out(participants):
+    """900001's HbA1c of 5.4 is normal by both the lab and ADA -> excluded, not silent.
+
+    This is the absent pole the Voice sets withdrew: it is allowed here because a measured
+    value on a dated assay genuinely rules the abnormality out at that observation.
+    """
+    assert ("HP:0040217", True) in _features(participants["900001"])
+
+
+def test_measurement_derived_features_carry_direct_assay_evidence_not_self_report(participants):
+    feature = next(f for f in participants["900002"].phenotypic_features
+                   if f.type.id == "HP:0040217" and not f.excluded)
+    assert feature.evidence[0].evidence_code.id == "ECO:0007307"
+    assert feature.evidence[0].reference.id == "b2ai:measurement.import_hba1c"
+    assert "measured value" in feature.description and "self-report" not in feature.description
+
+
+def test_each_draw_derives_its_own_feature_with_its_own_time(participants):
+    """900002 has HbA1c 8.1 in 2024 and 7.4 in 2025 -- two observations, two features.
+
+    Age precision renders the two as different Ages (P67Y and P68Y), which is exactly why the
+    derivation is per row rather than per participant.
+    """
+    elevated = [f for f in participants["900002"].phenotypic_features
+                if f.type.id == "HP:0040217" and not f.excluded]
+    assert len(elevated) == 2
+    assert {f.onset.age_iso8601 for f in elevated} == {"P67Y", "P68Y"}
+
+
+def test_a_sentinel_on_a_measurement_derives_nothing(participants):
+    """900003's HbA1c is 999.0, a refusal code. It is dropped before any gate sees it.
+
+    This is the only defence for measured values: a continuous assay has no upper bound to
+    write into a gate (a platelet count of 555 is a real thrombocytosis), so the screen in the
+    reader has to be what stops a refusal code reading as a wildly abnormal result.
+    """
+    assert "HP:0040217" not in {f.type.id for f in participants["900003"].phenotypic_features}
+
+
+def test_a_censored_value_derives_nothing(participants):
+    """900001's NT-proBNP is a '< 36' bound. Neither pole may fire on a bound."""
+    assert "HP:0031185" not in {f.type.id for f in participants["900001"].phenotypic_features}
+
+
+def test_a_reading_inside_the_silent_band_asserts_nothing(participants):
+    """900001's systolic readings are 128 and 124: AHA 'Elevated', below stage 1, above normal.
+
+    Neither pole fires -- the band between the present and absent cut-points is deliberately
+    silent, and this pins that it stays silent rather than being swallowed by either pole.
+    """
+    assert "HP:0004421" not in {f.type.id for f in participants["900001"].phenotypic_features}
+
+
+def test_a_normal_reading_rules_the_vital_out(participants):
+    """900004's single systolic reading of 118 is AHA 'Normal' -> excluded."""
+    assert ("HP:0004421", True) in _features(participants["900004"])
+
+
+def test_a_per_foot_item_asserts_presence_from_either_side(participants):
+    """900003 felt 10/10 sites on the right foot and 7/10 on the left -> present, no absent."""
+    assert ("HP:0002936", False) in _features(participants["900003"])
+    assert ("HP:0002936", True) not in _features(participants["900003"])
+
+
+def test_derived_features_are_counted_after_reconciliation(source_report):
+    """The report counts what the packets carry, not what the rows fired."""
+    packets = {p.individual.id: p for p in AireadiSource(FIXTURE, CONFIG_DIR).read()}
+    measured = sum(
+        1 for p in packets.values() for f in p.phenotypic_features
+        if f.evidence and f.evidence[0].evidence_code.id == "ECO:0007307"
+    )
+    assert source_report.features_derived == measured > 0
+
+
+# ---------- reconciliation and the float resolver, in isolation
+def test_reconcile_lets_presence_win_over_absence_at_the_same_time():
+    from b2ai_dataset_ingest.model import OntologyTerm, PhenotypicFeatureObservation, TimePoint
+    from b2ai_dataset_ingest.sources.aireadi.reader import _reconcile
+
+    when = TimePoint(session_id="visit-1", age_iso8601="P60Y")
+    later = TimePoint(session_id="visit-2", age_iso8601="P61Y")
+    term = OntologyTerm(id="HP:0004421", label="Elevated systolic blood pressure")
+    present = PhenotypicFeatureObservation(type=term, onset=when)
+    absent = PhenotypicFeatureObservation(type=term, excluded=True, onset=when)
+    absent_later = PhenotypicFeatureObservation(type=term, excluded=True, onset=later)
+
+    # bp1 elevated, bp2 normal, same visit: one present feature, the absent one is dropped.
+    assert _reconcile([present, absent]) == [present]
+    # bp1 and bp2 both elevated: identical assertions collapse to one.
+    assert _reconcile([present, present]) == [present]
+    # normal at a later visit: a change over time, kept alongside the earlier presence.
+    assert _reconcile([present, absent_later]) == [present, absent_later]
+
+
+def test_the_measurement_resolver_compares_the_float_not_a_truncated_int():
+    """`>50` must fire on 50.5. `_ordinal_of` truncates to 50 and would not; `_raw_number`
+    resolves nothing so the evaluator reads the raw cell as a float."""
+    from b2ai_dataset_ingest.mapping.conditions import parse_condition
+    from b2ai_dataset_ingest.mapping.hpo_rules import ConditionalRule, derive_features
+    from b2ai_dataset_ingest.sources.aireadi.reader import _ordinal_of, _raw_number
+
+    rule = ConditionalRule(
+        subject_id="b2ai:measurement.lbscat_hct", table="measurement", column="lbscat_hct",
+        object_id="HP:0001899", object_label="Increased hematocrit",
+        predicate_id="skos:relatedMatch", condition=parse_condition(">50"), when_value=">50",
+        evidence_code="ECO:0007307",
+    )
+    row, rules = {"lbscat_hct": "50.5"}, {"lbscat_hct": [rule]}
+    assert len(derive_features(row, rules, _raw_number)) == 1
+    assert derive_features(row, rules, _ordinal_of) == []  # the hazard, pinned

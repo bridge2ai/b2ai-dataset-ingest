@@ -12,11 +12,21 @@ Two steps:
   ``when_value``) and returns the conditional rules indexed ``table -> column -> [rules]``.
 - :func:`derive_features` evaluates those rules against one answered row and emits
   :class:`~b2ai_dataset_ingest.model.core.PhenotypicFeatureObservation`\\s. Each derived feature
-  carries provenance: a human-readable description and a GA4GH ``Evidence`` with an ECO
-  self-report code and an ``ExternalReference`` to the source item — so a questionnaire-derived
-  phenotype is never mistaken for a clinician-observed finding. Only **presence** is derived:
-  a questionnaire's lowest answer denies the symptom within the instrument's recall window,
-  not the phenotype (see docs/mapping-conventions.md).
+  carries provenance: a human-readable description and a GA4GH ``Evidence`` with an ECO code
+  and an ``ExternalReference`` to the source item — so a questionnaire-derived phenotype is
+  never mistaken for a clinician-observed finding, and a lab-derived one is never mistaken for
+  self-report.
+
+Two kinds of row, told apart by the ``evidence_code`` extension column:
+
+- **Self-report** (``ECO:0006160``, the default when the column is absent). Only **presence**
+  is derived: a questionnaire's lowest answer denies the symptom within the instrument's
+  recall window, not the phenotype (see docs/mapping-conventions.md).
+- **Measured value** (``ECO:0007307``, direct assay evidence). The gate is a reference-range
+  cut-point over a dated measurement, and a value inside the normal range genuinely rules the
+  abnormality out *at that observation*, so such a row may carry the standard SSSOM
+  ``predicate_modifier: Not`` and derives an ``excluded`` feature. The feature keeps the
+  measurement's own time, which is what qualifies the exclusion.
 
 The loader is **tolerant**, mirroring the rest of the reader: a malformed ``when_value`` or a
 non-HPO object is logged (by subject — mapping metadata, never PHI) and skipped, because
@@ -57,6 +67,28 @@ SELF_REPORT_EVIDENCE = OntologyTerm(
     label="self-reported patient statement evidence used in automatic assertion",
 )
 
+#: ECO term for a feature derived from a measured value -- a lab analyte, a vital sign, an
+#: instrumented test -- compared against a reference range. Verified real + non-obsolete
+#: against sqlite:obo:eco (2026-09-23): "A type of direct assay evidence that is used in an
+#: automatic assertion." Distinct from self-report so a consumer can weight the two.
+MEASURED_VALUE_EVIDENCE = OntologyTerm(
+    id="ECO:0007307",
+    label="direct assay evidence used in automatic assertion",
+)
+
+#: The evidence codes a mapping row may declare in its ``evidence_code`` column, and the only
+#: ones the validator accepts. Kept here, next to the terms the apply path stamps, so the
+#: validator and the emitter can never disagree about what a code means.
+EVIDENCE_CODES: dict[str, OntologyTerm] = {
+    SELF_REPORT_EVIDENCE.id: SELF_REPORT_EVIDENCE,
+    MEASURED_VALUE_EVIDENCE.id: MEASURED_VALUE_EVIDENCE,
+}
+
+
+def is_self_report(evidence_code: str) -> bool:
+    """True for the self-report code, and for a row that declares none (the Voice default)."""
+    return (evidence_code or "").strip() in ("", SELF_REPORT_EVIDENCE.id)
+
 
 @dataclass(frozen=True)
 class ConditionalRule:
@@ -72,6 +104,9 @@ class ConditionalRule:
     when_value: str  # raw expression, kept for provenance
     subject_label: str = ""
     confidence: str = ""
+    #: ``predicate_modifier: Not`` -- the gate names the values that rule the phenotype OUT.
+    excluded: bool = False
+    evidence_code: str = SELF_REPORT_EVIDENCE.id
 
 
 # --------------------------------------------------------------------------- loading
@@ -125,6 +160,25 @@ def _rule_from_row(row: dict[str, str], fname: str) -> ConditionalRule | None:
             "%s: skipping %s — unparseable when_value %r (%s)", fname, subject_id, when_value, exc
         )
         return None
+    modifier = (row.get("predicate_modifier") or "").strip()
+    evidence_code = (row.get("evidence_code") or "").strip() or SELF_REPORT_EVIDENCE.id
+    if evidence_code not in EVIDENCE_CODES:
+        logger.warning(
+            "%s: skipping %s — unknown evidence_code %r", fname, subject_id, evidence_code
+        )
+        return None
+    if modifier and modifier.lower() != "not":
+        logger.warning(
+            "%s: skipping %s — unknown predicate_modifier %r", fname, subject_id, modifier
+        )
+        return None
+    if modifier and is_self_report(evidence_code):
+        # The absent pole was withdrawn for self-report on clinical review; the validator
+        # errors on it, and the apply path must not quietly honour what CI rejects.
+        logger.warning(
+            "%s: skipping %s — predicate_modifier on a self-report row", fname, subject_id
+        )
+        return None
     table, column = subject_id.split(":", 1)[1].split(".", 1)
     return ConditionalRule(
         subject_id=subject_id,
@@ -137,6 +191,8 @@ def _rule_from_row(row: dict[str, str], fname: str) -> ConditionalRule | None:
         when_value=when_value,
         subject_label=(row.get("subject_label") or "").strip(),
         confidence=(row.get("confidence") or "").strip(),
+        excluded=bool(modifier),
+        evidence_code=evidence_code,
     )
 
 
@@ -176,11 +232,12 @@ def _feature_from_rule(
 ) -> PhenotypicFeatureObservation:
     return PhenotypicFeatureObservation(
         type=OntologyTerm(id=rule.object_id, label=rule.object_label or None),
+        excluded=rule.excluded,
         onset=time,
         description=_describe(rule),
         evidence=[
             Evidence(
-                evidence_code=SELF_REPORT_EVIDENCE,
+                evidence_code=EVIDENCE_CODES[rule.evidence_code],
                 reference=ExternalReference(
                     id=rule.subject_id,
                     reference=expand(rule.subject_id),
@@ -196,7 +253,12 @@ def _describe(rule: ConditionalRule) -> str:
     source = f"{rule.subject_id}" + (f" ({rule.subject_label})" if rule.subject_label else "")
     target = f"{rule.object_id}" + (f" {rule.object_label}" if rule.object_label else "")
     confidence = f", confidence {rule.confidence}" if rule.confidence else ""
+    pole = "absent" if rule.excluded else "present"
+    if is_self_report(rule.evidence_code):
+        origin, gate = "self-reported item", "answer"
+    else:
+        origin, gate = "measured value of", "value"
     return (
-        f"Derived present from self-reported item {source} "
-        f"[{rule.predicate_id} {target}] when answer {rule.when_value}{confidence}."
+        f"Derived {pole} from {origin} {source} "
+        f"[{rule.predicate_id} {target}] when {gate} {rule.when_value}{confidence}."
     )

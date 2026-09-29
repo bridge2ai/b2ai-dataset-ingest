@@ -37,3 +37,18 @@ AI-READI publishes under CC-BY-4.0 at docs.aireadi.org. Rows are Data; schema is
 | A configured-but-unresolved condition | `mhoccur_ua` — skipped, never emitted as a `TODO` CURIE. |
 | A condition with no config entry at all | `mhoccur_nonesuch` — counted as unmapped. |
 | Fully redacted sex | `gender_concept_id = 0` on every `person.csv` row — AI-READI states that sex and race/ethnicity are removed from published releases. |
+
+## What the same rows exercise in the measurement → HPO derivation
+
+The shipped `mappings/b2ai-aireadi-measurement.sssom.tsv` gates these rows too; nothing was
+added for it, the existing hazards double as gate cases.
+
+| Gate case | Where |
+| --- | --- |
+| A value beyond its interval asserts the term | 900002's HbA1c 8.1 → `HP:0040217` present. |
+| A value inside its interval rules the term out (`excluded`) | 900001's HbA1c 5.4; 900004's systolic 118; 900002's diastolic 78. |
+| One feature per draw, each with its own time | 900002's two HbA1c draws a year apart → two present features, `P67Y` and `P68Y`. |
+| A sentinel never reaches a gate | 900003's HbA1c `999.0`. |
+| A censored bound never reaches a gate | 900001's NT-proBNP. |
+| The silent band between the poles | 900001's systolic 128 / 124 (AHA "Elevated") → nothing. |
+| A per-foot item asserts presence and never absence | 900003's left foot 7/10 → `HP:0002936` present; right foot 10/10 asserts nothing. |

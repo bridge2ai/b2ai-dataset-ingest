@@ -135,27 +135,45 @@ published standard: a second OMOP dataset reuses the module and writes only its 
 
 ### Value-gated HPO derivation
 
-The machinery is wired and tested; no curated AI-READI → HPO rows ship yet.
+Two tables feed it, and they are gated differently because the evidence is different.
 
-`observation.csv` rows pivot to the plain `{item: value}` view via `omop.as_row`, which is
-exactly the contract `hpo_rules.derive_features` already takes — so the derivation runs with
-**no** OMOP-specific changes to `hpo_rules`. Measurements emit per row as the table streams,
-while the gated path buffers only the items that actually carry a rule rather than all ~355.
+**`measurement.csv` — curated, shipping.** `mappings/b2ai-aireadi-measurement.sssom.tsv`
+(147 rows over 54 items) gates each assay on a reference range: a value beyond the interval
+asserts the HPO term, a value inside it rules the term *out* via the standard SSSOM
+`predicate_modifier: Not` → `excluded = true`. Rows declare `evidence_code: ECO:0007307`
+(direct assay evidence), which is what licenses both the `relatedMatch` gate and the absent
+pole — see `docs/mapping-conventions.md`, "Measured-value (reference-range) mappings", and the
+2026-09-23 amendment to [ADR-0002](../adr/0002-conditional-hpo-mapping.md). The reader derives
+**per row** as the table streams — a participant with two HbA1c draws gets two features with
+two times — and only from a row that was fit to emit as a `Measurement`, so a sentinel, a
+censored bound or an unmapped unit never reaches a gate. Values are compared as floats
+(`_raw_number`, not the truncating `_ordinal_of`). Per participant, `_reconcile` collapses
+identical assertions from the paired blood-pressure and pulse readings and lets presence win
+over absence for one term at one time. Thresholds come from the performing lab's published
+intervals (UW NORC, docs.aireadi.org), ABIM 2025 for the site CBC, and guideline categories,
+each named per row in `threshold_source`; sex-split intervals are collapsed to sex-blind
+conservative gates because `Individual.sex` is redacted in the public release.
 
-Two defences stop a refusal code asserting a phenotype, and both are needed.
+**`observation.csv` — machinery proven, nothing curated ships.** Rows pivot to the plain
+`{item: value}` view via `omop.as_row`, which is exactly the contract
+`hpo_rules.derive_features` already takes. The gated path buffers only the items that actually
+carry a rule rather than all ~355.
+
+Two defences stop a refusal code asserting a phenotype from self-report, and both are needed.
 `conditions._match_scalar` falls back to the raw cell when the ordinal is `None`, so `>=1`
 matches an answer of `777` whether or not the resolver returns `None`. The reader therefore
-screens sentinels before buffering, **and** every shipped `when_value` must be bounded
-(`in {1,2,3}`, `>=n & <=m`) rather than open-ended — enforced by a test over the AI-READI
-mapping sets.
+screens sentinels before buffering, **and** every shipped self-report `when_value` must be
+bounded (`in {1,2,3}`, `>=n & <=m`) rather than open-ended — enforced by a test over the
+AI-READI sets. Measured values get the first defence only: a continuous assay has no natural
+upper bound to write into a gate.
 
-Nothing curated ships because the curation is not settled: an adversarial review of proposed
-CES-D-10 mappings refuted five of the seven it judged, on predicate direction and on
+No self-report rows ship because that curation is not settled: an adversarial review of
+proposed CES-D-10 mappings refuted five of the seven it judged, on predicate direction and on
 cut-point. In this repo a cut-point is a curator judgement — the Voice set got clinical
-review before it shipped — so the AI-READI set waits for the same. The path is proven against
-an injected mapping in `tests/test_aireadi_observation.py`, the pattern
-`tests/test_conditional_features.py` already uses for Voice, and a test asserts the shipped
-sets are empty so that landing rows is a deliberate act.
+review before it shipped — so the observation set waits for the same. The path is proven
+against an injected mapping in `tests/test_aireadi_observation.py`, the pattern
+`tests/test_conditional_features.py` already uses for Voice, and a test asserts no
+`observation` rules ship so that landing them is a deliberate act.
 
 ## 5. Testing strategy
 

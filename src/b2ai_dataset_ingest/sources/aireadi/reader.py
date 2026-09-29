@@ -7,6 +7,9 @@ The AI-READI release is a CDS-v0.1.1 tree whose clinical payload is OMOP CDM v5.
     clinical_data/visit_occurrence.csv     -> the visit -> time index
     clinical_data/condition_occurrence.csv -> DiseaseObservation (MONDO)
     clinical_data/measurement.csv          -> MeasurementObservation (assay + unit + range)
+                                              + value-gated PhenotypicFeature (HPO, per row)
+    clinical_data/observation.csv          -> MeasurementObservation (instrument items)
+                                              + value-gated PhenotypicFeature (HPO, per answer)
 
 Where this diverges from :mod:`sources.voice.reader`, and why:
 
@@ -443,6 +446,13 @@ class AireadiSource(Source):
             self.report.tables_missing.append(table)
             return
         self.report.tables_read.append(table)
+
+        # Value-gated HPO derivation runs PER ROW, unlike the observation path, and that is
+        # the right shape for this table: a lab result is a dated observation in its own
+        # right, so a participant with two HbA1c draws gets two features with two times
+        # rather than one answer per item. Nothing is buffered but the derived features.
+        table_rules = self._conditional_rules().get(table, {})
+        derived: dict[str, list[PhenotypicFeatureObservation]] = {}
         for row in rows:
             cell = spec.cell(row)
             person_id = (row.get(spec.id_column) or "").strip()
@@ -451,9 +461,25 @@ class AireadiSource(Source):
             observation = self._measurement(
                 cell, measures, units, table, visits, anchors.get(person_id), row
             )
-            if observation is not None:
-                accumulator(person_id).measurements.append(observation)
-                self.report.measurements_emitted += 1
+            if observation is None:
+                continue
+            accumulator(person_id).measurements.append(observation)
+            self.report.measurements_emitted += 1
+            rules = table_rules.get(cell.item)
+            if not rules:
+                continue
+            # Gating only what was fit to emit as a Measurement is the whole screen: a
+            # sentinel, a censored bound or an unmapped unit never reaches a cut-point.
+            # `_raw_number` (not `_ordinal_of`) is load-bearing -- see its docstring.
+            derived.setdefault(person_id, []).extend(
+                derive_features(
+                    {cell.item: cell.value}, {cell.item: rules}, _raw_number, observation.time
+                )
+            )
+        for person_id, features in derived.items():
+            reconciled = _reconcile(features)
+            accumulator(person_id).phenotypic_features.extend(reconciled)
+            self.report.features_derived += len(reconciled)
 
     def _measurement(
         self,
@@ -641,6 +667,54 @@ def _drop_reason(item: str, dropped: dict[str, str]) -> str | None:
         if item == pattern or fnmatch(item, pattern):
             return reason
     return None
+
+
+def _raw_number(_item: str, _raw: str) -> None:
+    """Resolve nothing, so a measured value is compared as the float it is.
+
+    Returning ``None`` makes ``conditions._match_scalar`` fall back to the raw cell parsed as a
+    number. Reusing :func:`_ordinal_of` here would be a defect, not a shortcut: it truncates
+    to ``int``, so a hematocrit of 50.5 becomes 50 and a ``>50`` gate that should fire does
+    not, while 36.9 becomes 36 and still fires ``<37`` -- silently right on one side of every
+    cut-point and wrong on the other.
+    """
+    return None
+
+
+def _reconcile(
+    features: list[PhenotypicFeatureObservation],
+) -> list[PhenotypicFeatureObservation]:
+    """Collapse one participant's measurement-derived features into a coherent set.
+
+    Two things a per-row derivation produces that a packet must not carry:
+
+    - **The same assertion twice.** Blood pressure and pulse are each taken twice and the two
+      readings gate independently, so an elevated pair yields two identical features at the
+      same time. One is kept.
+    - **Present and absent for one term at one time.** A first reading of 131 asserts
+      Elevated systolic blood pressure and a second of 119 rules it out. Presence wins: a
+      normal reading alongside an abnormal one does not make the abnormal one unmeasured.
+      The two poles at *different* times are both kept -- that is a change over time, which
+      is exactly what a second visit is for.
+    """
+    present = {(f.type.id, _moment(f)) for f in features if not f.excluded}
+    kept: list[PhenotypicFeatureObservation] = []
+    seen: set[tuple[str, bool, tuple[str | None, ...] | None]] = set()
+    for feature in features:
+        key = (feature.type.id, feature.excluded, _moment(feature))
+        if key in seen or (feature.excluded and (feature.type.id, _moment(feature)) in present):
+            continue
+        seen.add(key)
+        kept.append(feature)
+    return kept
+
+
+def _moment(feature: PhenotypicFeatureObservation) -> tuple[str | None, ...] | None:
+    """A hashable identity for when a feature was observed (TimePoint is not hashable)."""
+    when = feature.onset
+    if when is None:
+        return None
+    return (when.session_id, when.timestamp, when.age_iso8601)
 
 
 def _ordinal_of(_item: str, raw: str) -> int | None:
