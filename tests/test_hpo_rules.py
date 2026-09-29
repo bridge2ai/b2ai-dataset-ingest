@@ -192,3 +192,14 @@ def test_a_modifier_on_a_self_report_row_is_skipped_not_honoured(tmp_path: Path,
         assert load_conditional_rules([path]) == {}
     assert "predicate_modifier on a self-report row" in caplog.text
     assert "unknown evidence_code" in caplog.text
+
+
+def test_mapping_discovery_fails_loudly_when_no_files_are_found(tmp_path: Path):
+    """An empty discovery used to yield packets with zero HPO features and no warning."""
+    import pytest
+
+    from b2ai_dataset_ingest.mapping.sssom_io import default_mapping_files
+
+    (tmp_path / "mappings").mkdir()
+    with pytest.raises(FileNotFoundError, match="mapping files under"):
+        default_mapping_files(tmp_path, dataset="voice")

@@ -60,7 +60,22 @@ def default_mapping_files(repo_root: Path | None = None, dataset: str | None = N
     A reader must pass it: ``load_conditional_rules`` indexes rules by bare table name
     across every file it is given, so an unscoped load would let one dataset's value-gated
     rules fire on another dataset's identically-named table.
+
+    Without ``repo_root``, the checkout's ``mappings/`` is used when running from source,
+    else the copy the wheel ships inside the package. Finding no files raises: an empty
+    result would silently emit phenopackets with no HPO features.
     """
-    root = repo_root or Path(__file__).resolve().parents[3]
+    if repo_root is not None:
+        directory = repo_root / "mappings"
+    else:
+        here = Path(__file__).resolve()
+        checkout = here.parents[3] / "mappings"
+        directory = checkout if checkout.is_dir() else here.parents[1] / "mappings"
     pattern = f"b2ai-{dataset}-*.sssom.tsv" if dataset else "*.sssom.tsv"
-    return sorted((root / "mappings").glob(pattern))
+    files = sorted(directory.glob(pattern))
+    if not files:
+        raise FileNotFoundError(
+            f"no {pattern} mapping files under {directory}; without them no HPO features "
+            "can be derived"
+        )
+    return files
