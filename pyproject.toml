@@ -63,6 +63,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/b2ai_dataset_ingest"]
 
+# The SSSOM sets drive HPO derivation at runtime, so an installed package needs them.
+[tool.hatch.build.targets.wheel.force-include]
+"mappings" = "b2ai_dataset_ingest/mappings"
+
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
