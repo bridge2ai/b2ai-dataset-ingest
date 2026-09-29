@@ -154,10 +154,14 @@ intervals (UW NORC, docs.aireadi.org), ABIM 2025 for the site CBC, and guideline
 each named per row in `threshold_source`; sex-split intervals are collapsed to sex-blind
 conservative gates because `Individual.sex` is redacted in the public release.
 
-**`observation.csv` — machinery proven, nothing curated ships.** Rows pivot to the plain
-`{item: value}` view via `omop.as_row`, which is exactly the contract
-`hpo_rules.derive_features` already takes. The gated path buffers only the items that actually
-carry a rule rather than all ~355.
+**`observation.csv` — self-report, presence only.** `mappings/b2ai-aireadi-observation.sssom.tsv`
+gates the CES-D-10 items and total (8 rows, bounded `in {..}` gates, cut-points chosen by
+comparing answer labels with the Voice PHQ-9 rows) and maps the medical-history grid, falls
+and the vision-function items term-to-term **ungated**, with the intended gate written in each
+row's comment: those families are dropped by `scope.yaml` and a gated row must name an
+emitted assay. Rows pivot to the plain `{item: value}` view via `omop.as_row`, which is exactly
+the contract `hpo_rules.derive_features` already takes. The gated path buffers only the items
+that actually carry a rule rather than all ~355.
 
 Two defences stop a refusal code asserting a phenotype from self-report, and both are needed.
 `conditions._match_scalar` falls back to the raw cell when the ordinal is `None`, so `>=1`
@@ -167,13 +171,13 @@ bounded (`in {1,2,3}`, `>=n & <=m`) rather than open-ended — enforced by a tes
 AI-READI sets. Measured values get the first defence only: a continuous assay has no natural
 upper bound to write into a gate.
 
-No self-report rows ship because that curation is not settled: an adversarial review of
-proposed CES-D-10 mappings refuted five of the seven it judged, on predicate direction and on
-cut-point. In this repo a cut-point is a curator judgement — the Voice set got clinical
-review before it shipped — so the observation set waits for the same. The path is proven
-against an injected mapping in `tests/test_aireadi_observation.py`, the pattern
-`tests/test_conditional_features.py` already uses for Voice, and a test asserts no
-`observation` rules ship so that landing them is a deliberate act.
+The CES-D-10 cut-points are marked pending the clinical review the Voice set had: an earlier
+adversarial review disputed direction and cut-point on several proposed CES-D-10 rows, so each
+shipped row records its reasoning for a reviewer to rule on, and
+`tests/test_aireadi_observation.py` pins every shipped cut-point against the fixture so a
+re-curation shows up as a test change rather than a silent shift in output. The path itself is
+also proven there against an injected mapping, the pattern `tests/test_conditional_features.py`
+already uses for Voice.
 
 ## 5. Testing strategy
 

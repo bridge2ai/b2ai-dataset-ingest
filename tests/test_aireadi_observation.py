@@ -271,13 +271,11 @@ def test_monofilament_carries_the_examination_but_an_unlateralized_site(particip
 
 # ---------- the value-gated HPO path
 #
-# No curated self-report AI-READI -> HPO rows ship from observation.csv yet. An adversarial
-# review of ten proposed CES-D-10 mappings refuted five of seven that got as far as judging,
-# on predicate direction and on cut-point, so that curation is not settled — and in this repo
-# a cut-point is a curator judgement that took clinical review for the Voice set. The
-# observation path is therefore proven here against an INJECTED mapping, exactly as
-# tests/test_conditional_features.py does for Voice. (The measurement path ships curated
-# reference-range rows; see test_aireadi_reader.py.)
+# The path is proven here against an INJECTED mapping, exactly as
+# tests/test_conditional_features.py does for Voice, independently of whatever the shipped
+# set says; the shipped CES-D-10 rows are pinned separately above. (An earlier adversarial
+# review disputed direction and cut-point on several proposed CES-D-10 rows; the shipped set
+# records its reasoning per row and awaits the clinical review the Voice set had.)
 GATED_SET = """# curie_map:
 #   b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
 #   HP: http://purl.obolibrary.org/obo/HP_
@@ -332,11 +330,66 @@ def test_a_refusal_code_on_a_gated_item_derives_nothing(tmp_path):
     assert packets["900001"].phenotypic_features == []
 
 
-def test_no_curated_self_report_hpo_rows_ship_from_observation_yet():
-    """Guards the deferral for the self-report table specifically.
+# ---------- the shipped CES-D-10 rows, against the fixture
+#
+# mappings/b2ai-aireadi-observation.sssom.tsv gates the CES-D-10 items and total. These pin
+# the shipped cut-points against the fixture answers, so a re-curation that moves one shows
+# up here rather than as a silent change in someone's output.
 
-    Delete this test in the commit that lands a clinically-reviewed observation.csv set.
+
+def _observed(packet):
+    return {
+        f.type.id for f in packet.phenotypic_features
+        if f.evidence and f.evidence[0].evidence_code.id == "ECO:0006160"
+    }
+
+
+def test_an_endorsed_cesd_item_derives_the_phenotype_with_self_report_evidence(participants):
+    """900001 answers ces3 'I felt depressed' at 3 -> Pathological sadness, self-reported."""
+    assert "HP:5200273" in _observed(participants["900001"])
+    feature = next(f for f in participants["900001"].phenotypic_features
+                   if f.type.id == "HP:5200273")
+    assert not feature.excluded
+    assert feature.evidence[0].reference.id == "b2ai:observation.ces3"
+
+
+def test_the_lowest_cesd_rung_is_inside_the_gate(participants):
+    """900002 answers ces3 at 1 ('Some or a little of the time, 1-2 days') -> present.
+
+    The repo rule is to compare answer LABELS across instruments: 1-2 days of the past week is
+    the endorsement PHQ-9 gates at 'Several days' over two weeks, so the gate is in {1,2,3}.
     """
+    assert "HP:5200273" in _observed(participants["900002"])
+
+
+def test_a_zero_asserts_nothing_and_never_an_absence(participants):
+    """900003 answers ces3 at 0. Self-report derives presence only."""
+    assert "HP:5200273" not in _observed(participants["900003"])
+    assert not any(f.excluded for f in participants["900003"].phenotypic_features)
+
+
+def test_the_cesd_total_screen_derives_depression(participants):
+    """900001's total of 14 is at or above the published screening cut-off of 10."""
+    assert "HP:0000716" in _observed(participants["900001"])
+
+
+def test_a_refusal_code_on_a_shipped_gate_derives_nothing(participants):
+    """900001 answers ces7 with 777; 900002 answers it at 2. Only the latter derives."""
+    assert "HP:0002360" not in _observed(participants["900001"])
+    assert "HP:0002360" in _observed(participants["900002"])
+
+
+def test_reverse_scored_items_are_semantic_only(participants):
+    """900001 answers ces5 'hopeful' at 3 (rarely). The row is narrowMatch and ungated, so
+    a low-hope answer never asserts Hopelessness."""
+    assert "HP:5200271" not in _observed(participants["900001"])
+
+
+def test_only_ingested_observation_items_carry_a_gate():
+    """A gated row must name an emitted assay; the medical-history and vision rows are
+    term-to-term only until scope.yaml ingests them."""
     from b2ai_dataset_ingest.mapping.hpo_rules import load_conditional_rules
 
-    assert "observation" not in load_conditional_rules(dataset="aireadi")
+    gated = set(load_conditional_rules(dataset="aireadi").get("observation", {}))
+    ingested = set(load_mapping(CONFIG_DIR / "observation" / "cesd10.yaml")["measures"])
+    assert gated and gated <= ingested

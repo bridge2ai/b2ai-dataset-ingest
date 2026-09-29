@@ -118,8 +118,9 @@ is *value-gated*: the pipeline derives a `PhenotypicFeature` from a participant'
   then no longer be joined to the `Measurement` it was derived from. Use a dot, never a
   dash. Enforced by `tests/test_config_mappings.py::test_config_b2ai_ids_use_dot_separator`
   and `::test_gated_sssom_subjects_have_a_matching_config_assay`.
-- **Files.** One SSSOM/TSV per domain **and object ontology** (`b2ai-voice-signs-symptoms`,
-  `b2ai-voice-questionnaires`, `b2ai-voice-conditions`), each self-contained: a `#`-commented
+- **Files.** One SSSOM/TSV per dataset, domain **and object ontology** (`b2ai-voice-signs-symptoms`,
+  `b2ai-voice-questionnaires`, `b2ai-voice-conditions`, `b2ai-aireadi-conditions`,
+  `b2ai-aireadi-measurement`, `b2ai-aireadi-observation`), each self-contained: a `#`-commented
   SSSOM YAML metadata header (`curie_map`, `license`, `subject_source`, `object_source` + pinned
   `object_source_version`, `mapping_tool`) then a TSV of `subject_id, subject_label,
   predicate_id, object_id, object_label, mapping_justification, confidence, comment`. SSSOM/TSV
