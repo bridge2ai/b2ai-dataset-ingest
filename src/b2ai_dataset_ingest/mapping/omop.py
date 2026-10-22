@@ -31,6 +31,7 @@ Four rules encoded here are load-bearing, and each was established against real 
 from __future__ import annotations
 
 import logging
+import math
 import re
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
@@ -40,7 +41,10 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 #: Blank spellings in a *value* column. ``"0"`` is deliberately absent — it is an answer.
-NULL_VALUES = ("", " ", "N/A")
+#: ``nan`` / ``None`` are how a pandas export spells a missing cell: the flagship release
+#: carries the literal string ``nan`` in ``unit_source_value`` on every central-lab row
+#: (preflight, 2026-10-22). They are blanks, never units and never values.
+NULL_VALUES = ("", " ", "N/A", "nan", "NaN", "NAN", "None", "null", "NULL")
 
 #: Blank spellings in a ``*_concept_id`` column, where ``0`` is OMOP's "no matching concept".
 NULL_CONCEPT_IDS = ("", " ", "0", "0.0")
@@ -114,12 +118,15 @@ def is_bounded(operator_concept_id: Any) -> bool:
 def as_number(value: Any) -> float | None:
     """Parse a numeric cell; None when blank or non-numeric. ``0`` parses to ``0.0``."""
     raw = str(value if value is not None else "").strip()
-    if not raw:
+    if not raw or is_blank(raw):
         return None
     try:
-        return float(raw)
+        number = float(raw)
     except ValueError:
         return None
+    # float("nan") and float("inf") parse; neither is a measurement. A NaN that reached a
+    # Quantity would serialise and compare as nothing a gate can catch.
+    return number if math.isfinite(number) else None
 
 
 def iso_date(value: str) -> date | None:
