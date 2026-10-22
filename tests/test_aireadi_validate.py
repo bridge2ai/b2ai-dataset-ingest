@@ -85,7 +85,9 @@ def test_unmapped_items_on_disk_are_surfaced():
     report = validate_aireadi(FIXTURE, CONFIG_DIR)
     messages = " ".join(f.message for f in report.findings)
     assert "mhoccur_nonesuch" in messages  # no config entry at all
-    assert "moca_total_score" in messages  # deferred family
+    # moca_total_score was the deferred example until measurement/moca.yaml shipped it;
+    # a mapped item must no longer be reported as "no config entry".
+    assert "no config entry (not ingested): moca_total_score" not in messages
 
 
 # ---------- PHI safety
