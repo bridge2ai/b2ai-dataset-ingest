@@ -114,14 +114,23 @@ report and are not yet independently checked (its branch is not in this repo).
 >   of a row's identity for the duplicate check. This covers the sex- and age-split
 >   intervals #35 listed; ratios across items (ACR, sites felt ÷ tested) and paired
 >   readings remain reader-side, as before.
-> - **Decision 2 stands: execute in the pipeline.** The `ast.Num` crash is Python 3.14-only
->   (#35 is right that 3.12 works), but that was never the main reason: `linkml-map` is
->   still pre-1.0 (0.5.4, 2026-08-26), and a gate that references the subject's sex needs a
->   join the mapping language would have to be taught. The grammar in
->   `mapping/conditions.py` stays the executable definition. A time-boxed spike —
->   author the measurement gates as LinkML `rules` / `linkml-map` and regenerate the SSSOM —
->   is the remaining open item, and the acceptance test is that the regenerated SSSOM
->   round-trips through `validate-mappings` unchanged.
+> - **Decision 2 stands for execution, and is reversed for authoring: gates are written in
+>   LinkML, the SSSOM is generated.** The spike named below was run the same day and passed
+>   its acceptance test. Each AI-READI set now has a schema under `schema/gates/` in which a
+>   subject is a class (`class_uri` = the subject CURIE) and a gate is a standard LinkML
+>   `rule`: preconditions are `slot_conditions` on `value` (and `sex` / `age` for a stratum),
+>   postconditions fix `phenotype` and `status`. The gate vocabulary is LinkML's own
+>   (`minimum_value`, `maximum_value`, `none_of` for an exclusive bound, `equals_number`,
+>   `any_of`), so any LinkML tool reads the semantics; the non-executed SSSOM columns ride in
+>   rule annotations, and an ungated row is a class-level `*_mappings` entry.
+>   `scripts/gates_to_sssom.py` renders a set through `SchemaView`; the committed TSV must
+>   equal the rendering (CI `--check` and `tests/test_linkml_gates.py`). The four migrated
+>   sets rendered back semantically identical to the hand-curated originals, header included,
+>   and clean through `validate-mappings`. The reader still *executes* the TSV via
+>   `mapping/conditions.py`: the shareable artefact and the executed artefact stay one file,
+>   and the `ast.Num` / `linkml-map` concerns are moot because nothing is evaluated by LinkML
+>   at run time. `linkml-map` (0.5.4, pre-1.0) was not needed: plain `rules` express every
+>   gate shape in the sets. The Voice sets are not yet migrated.
 > - **The IR has a LinkML schema, as a contract rather than as the executable model.**
 >   `schema/b2ai_ir.yaml` is the documented form of `model/core.py`; `tests/test_ir_schema.py`
 >   keeps the two in lockstep (every class, field and required flag), with a `SchemaView`

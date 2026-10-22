@@ -1,0 +1,375 @@
+id: https://w3id.org/bridge2ai/b2ai-dataset-ingest/gates/b2ai-aireadi-conditions
+name: b2ai-aireadi-conditions
+description: Value gates for one SSSOM mapping set, authored as LinkML class rules. The SSSOM file is
+  GENERATED from this schema by scripts/gates_to_sssom.py; edit here, regenerate, commit both.
+imports:
+- linkml:types
+- gate_base
+prefixes:
+  linkml: https://w3id.org/linkml/
+  b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+  skos: http://www.w3.org/2004/02/skos/core#
+  semapv: https://w3id.org/semapv/vocab/
+  github: https://github.com/
+  obo: http://purl.obolibrary.org/obo/
+default_prefix: b2ai
+default_range: string
+annotations:
+  sssom_header: |
+    curie_map:
+      b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+      MONDO: http://purl.obolibrary.org/obo/MONDO_
+      skos: http://www.w3.org/2004/02/skos/core#
+      semapv: https://w3id.org/semapv/vocab/
+      github: https://github.com/
+      obo: http://purl.obolibrary.org/obo/
+    mapping_set_id: https://github.com/sujaypatil96/b2ai-dataset-ingest/mappings/b2ai-aireadi-conditions.sssom.tsv
+    mapping_set_version: '2026-09-09'
+    license: https://creativecommons.org/publicdomain/zero/1.0/
+    mapping_provider: https://github.com/sujaypatil96/b2ai-dataset-ingest
+    creator_id:
+      - github:sujaypatil96
+    subject_source: aireadi-synthetic/vumc
+    object_source: obo:mondo
+    object_source_version: mondo/releases/2026-05-05
+    mapping_tool: 'oaklib (sqlite:obo:mondo)'
+    mapping_date: '2026-09-09'
+    comment: AI-READI clinical_data/condition_occurrence.csv items mapped to MONDO. Subjects are b2ai:<omop_table>.<redcap_variable>. The OMOP table qualifier is mandatory, not cosmetic - these same variables also appear in observation.csv, where they are a self-reported yes/no answer rather than an asserted condition, so the two senses need distinct ids. Subjects are NOT keyed on concept_id, which is not unique per item. Item keys and concept ids come from the VUMC synthetic AI-READI release (data/synthetic/aireadi/); subject_label is the untruncated label from AI-READI's published CC-BY-4.0 crosswalk, because condition_source_value in the data is hard-truncated at 49 characters and is never usable as a label. That crosswalk is a candidate generator and never an oracle - it carries codes that do not resolve, e.g. LOINC:2403450 for systolic blood pressure - so every object_id here was independently found by searching the pinned MONDO release with oaklib and re-verified id->label. Four of the 30 items are deliberately absent -- three are conflated "A or B" checkboxes that must not broadMatch one sense (mhoccur_ua urinary-infection-or-incontinence, mhoccur_cvdot pacemaker-or-valve-disease-or-surgery, mhoccur_circ arterial-or-venous), and mh_a1c reports a lab finding rather than a diagnosis and belongs in an HPO layer. See docs/mapping-conventions.md.
+  sssom_columns: "subject_id\tsubject_label\tpredicate_id\tobject_id\tobject_label\tmapping_justification\t\
+    confidence\tcomment"
+classes:
+  ConditionOccurrenceMhoccurHbp:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_hbp
+    title: Hypertensive Disorder
+    exact_mappings:
+    - MONDO:0005044
+    annotations:
+      MONDO:0005044:
+        annotations:
+          object_label: hypertensive disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurClsh:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_clsh
+    title: Dyslipidemia
+    broad_mappings:
+    - MONDO:0021187
+    annotations:
+      MONDO:0021187:
+        annotations:
+          object_label: hyperlipidemia
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: the item asks about "High blood cholesterol" (hypercholesterolemia); MONDO has no hypercholesterolemia
+            term and hyperlipidemia subsumes it
+  ConditionOccurrenceMhoccurRa:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_ra
+    title: Arthritis
+    broad_mappings:
+    - MONDO:0006816
+    annotations:
+      MONDO:0006816:
+        annotations:
+          object_label: arthropathy
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: item conflates arthritis with joint pain ("Arthritis (joint pain)"); arthropathy has
+            the exact synonym "Joint disorder" and subsumes both senses, so it is broader than the item
+            rather than one sense of it
+  ConditionOccurrenceMhtermDm2:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhterm_dm2
+    title: Type 2 diabetes mellitus
+    exact_mappings:
+    - MONDO:0005148
+    annotations:
+      MONDO:0005148:
+        annotations:
+          object_label: type 2 diabetes mellitus
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurObs:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_obs
+    title: Obesity
+    exact_mappings:
+    - MONDO:0011122
+    annotations:
+      MONDO:0011122:
+        annotations:
+          object_label: obesity disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurDed:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_ded
+    title: Dry eyes
+    exact_mappings:
+    - MONDO:0006733
+    annotations:
+      MONDO:0006733:
+        annotations:
+          object_label: dry eye syndrome
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurCrt:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_crt
+    title: Bilateral cataracts
+    exact_mappings:
+    - MONDO:0005129
+    annotations:
+      MONDO:0005129:
+        annotations:
+          object_label: cataract
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: the item asks "Cataracts (in one or both eyes)", i.e. cataract generally; the OMOP
+            concept name "Bilateral cataracts" is narrower than what was asked
+  ConditionOccurrenceMhtermPredm:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhterm_predm
+    title: Prediabetes
+    exact_mappings:
+    - MONDO:0006920
+    annotations:
+      MONDO:0006920:
+        annotations:
+          object_label: prediabetes syndrome
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: MONDO exact synonym "prediabetes"
+  ConditionOccurrenceMhoccurGi:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_gi
+    title: Disorder of digestive system
+    exact_mappings:
+    - MONDO:0004335
+    annotations:
+      MONDO:0004335:
+        annotations:
+          object_label: digestive system disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurCa:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_ca
+    title: Cancer confirmed
+    exact_mappings:
+    - MONDO:0004992
+    annotations:
+      MONDO:0004992:
+        annotations:
+          object_label: cancer
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: item is "Cancer (any type)" and MONDO:0004992 is malignant neoplasm, so the scope matches
+  ConditionOccurrenceMhoccurEar:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_ear
+    title: Ear anomalies with hearing impairment
+    exact_mappings:
+    - MONDO:0005365
+    annotations:
+      MONDO:0005365:
+        annotations:
+          object_label: hearing loss disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: the item asks about "Hearing impairment"
+  ConditionOccurrenceMhoccurOa:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_oa
+    title: Osteoporosis
+    exact_mappings:
+    - MONDO:0005298
+    annotations:
+      MONDO:0005298:
+        annotations:
+          object_label: osteoporosis
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurPlm:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_plm
+    title: Chronic lung disease
+    broad_mappings:
+    - MONDO:0005275
+    annotations:
+      MONDO:0005275:
+        annotations:
+          object_label: lung disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: item is "Chronic pulmonary (lung) problems"; MONDO has no chronic-specific lung term,
+            so the general term is broader than the item
+  ConditionOccurrenceMhoccurRnl:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_rnl
+    title: Kidney problems
+    exact_mappings:
+    - MONDO:0005240
+    annotations:
+      MONDO:0005240:
+        annotations:
+          object_label: kidney disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurCns:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_cns
+    title: Neurocognitive disorder
+    broad_mappings:
+    - MONDO:0005071
+    annotations:
+      MONDO:0005071:
+        annotations:
+          object_label: nervous system disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: item is the residual category "Other neurological conditions"; the ontology term subsumes
+            it
+  ConditionOccurrenceMhoccurGlc:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_glc
+    title: Glaucoma
+    exact_mappings:
+    - MONDO:0005041
+    annotations:
+      MONDO:0005041:
+        annotations:
+          object_label: glaucoma
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: the item asks "Glaucoma (in one or both eyes)"; laterality is not part of the concept
+  ConditionOccurrenceMhoccurLbp:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_lbp
+    title: Low blood pressure
+    exact_mappings:
+    - MONDO:0005468
+    annotations:
+      MONDO:0005468:
+        annotations:
+          object_label: hypotensive disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurMi:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_mi
+    title: Myocardial infarction
+    exact_mappings:
+    - MONDO:0005068
+    annotations:
+      MONDO:0005068:
+        annotations:
+          object_label: myocardial infarction
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: item is "Heart attack"
+  ConditionOccurrenceMhoccurStrk:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_strk
+    title: Stroke
+    exact_mappings:
+    - MONDO:0005098
+    annotations:
+      MONDO:0005098:
+        annotations:
+          object_label: stroke disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurAmd:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_amd
+    title: Age related macular degeneration
+    exact_mappings:
+    - MONDO:0005150
+    annotations:
+      MONDO:0005150:
+        annotations:
+          object_label: age-related macular degeneration
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurPdr:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_pdr
+    title: Retinopathy due to diabetes mellitus
+    exact_mappings:
+    - MONDO:0005266
+    annotations:
+      MONDO:0005266:
+        annotations:
+          object_label: diabetic retinopathy
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: item is "Diabetic retinopathy (in one or both eyes)"
+  ConditionOccurrenceMhoccurCogn:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_cogn
+    title: Minimal cognitive impairment
+    broad_mappings:
+    - MONDO:0002039
+    annotations:
+      MONDO:0002039:
+        annotations:
+          object_label: cognitive disorder
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: item is mild cognitive impairment; MONDO has no MCI term (searched "mild cognitive
+            impairment", "cognitive impairment", "cognitive decline"), so the general term is broader
+  ConditionOccurrenceMhoccurRvo:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_rvo
+    title: Retinal vascular occlusion
+    exact_mappings:
+    - MONDO:0002089
+    annotations:
+      MONDO:0002089:
+        annotations:
+          object_label: retinal vascular occlusion
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurPd:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_pd
+    title: Parkinson's disease
+    exact_mappings:
+    - MONDO:0005180
+    annotations:
+      MONDO:0005180:
+        annotations:
+          object_label: Parkinson disease
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurMs:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_ms
+    title: Multiple sclerosis
+    exact_mappings:
+    - MONDO:0005301
+    annotations:
+      MONDO:0005301:
+        annotations:
+          object_label: multiple sclerosis
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+  ConditionOccurrenceMhoccurAd:
+    is_a: GatedItem
+    class_uri: b2ai:condition_occurrence.mhoccur_ad
+    title: Dementia
+    exact_mappings:
+    - MONDO:0001627
+    annotations:
+      MONDO:0001627:
+        annotations:
+          object_label: dementia
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'the item is "Dementia (Examples: Alzheimer''s Disease...)" - the category, with AD
+            given as an example, so the category term is the match rather than MONDO:0004975 Alzheimer
+            disease'

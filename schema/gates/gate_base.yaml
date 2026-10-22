@@ -1,0 +1,59 @@
+id: https://w3id.org/bridge2ai/b2ai-dataset-ingest/gates/base
+name: gate_base
+title: Base for value-gated term mappings
+description: >-
+  The abstract shape every gated item shares. A concrete item class (one per SSSOM subject,
+  with the subject CURIE as its class_uri) inherits these slots and carries its gates as
+  LinkML class rules: the preconditions constrain `value` (the measured or answered value)
+  and optionally `sex` / `age` (the stratum); the postconditions fix `phenotype` (the HPO
+  term) and `status` (present or excluded). Ungated, term-to-term rows are the class's
+  exact/close/broad/narrow/related mappings. scripts/gates_to_sssom.py renders a set to
+  SSSOM; see src/b2ai_dataset_ingest/mapping/linkml_gates.py.
+license: MIT
+prefixes:
+  linkml: https://w3id.org/linkml/
+  b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+  HP: http://purl.obolibrary.org/obo/HP_
+  MONDO: http://purl.obolibrary.org/obo/MONDO_
+  ECO: http://purl.obolibrary.org/obo/ECO_
+  skos: http://www.w3.org/2004/02/skos/core#
+  semapv: https://w3id.org/semapv/vocab/
+default_prefix: b2ai
+default_range: string
+imports:
+  - linkml:types
+
+classes:
+  GatedItem:
+    abstract: true
+    description: >-
+      One dataset item (an assay, an instrument answer, a device statistic) and the
+      phenotypes its values entail. Rules on a subclass are the gates.
+    attributes:
+      value:
+        description: The measured value, or the resolved ordinal of an answer.
+        range: float
+      sex:
+        description: Individual.sex, phenopacket enum spelling. Unknown never satisfies a condition.
+        range: SexEnum
+      age:
+        description: Whole years at the observation.
+        range: integer
+      phenotype:
+        description: The HPO term a rule's postconditions assert.
+        range: uriorcurie
+      status:
+        description: Whether the rule asserts the phenotype present or rules it out.
+        range: GateStatusEnum
+
+enums:
+  SexEnum:
+    permissible_values:
+      UNKNOWN_SEX: {}
+      FEMALE: {}
+      MALE: {}
+      OTHER_SEX: {}
+  GateStatusEnum:
+    permissible_values:
+      present: {description: The gate asserts the phenotype (no predicate_modifier).}
+      excluded: {description: The gate rules the phenotype out (predicate_modifier Not).}

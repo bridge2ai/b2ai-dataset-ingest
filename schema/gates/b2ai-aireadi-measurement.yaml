@@ -1,0 +1,4684 @@
+id: https://w3id.org/bridge2ai/b2ai-dataset-ingest/gates/b2ai-aireadi-measurement
+name: b2ai-aireadi-measurement
+description: Value gates for one SSSOM mapping set, authored as LinkML class rules. The SSSOM file is
+  GENERATED from this schema by scripts/gates_to_sssom.py; edit here, regenerate, commit both.
+imports:
+- linkml:types
+- gate_base
+prefixes:
+  linkml: https://w3id.org/linkml/
+  b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+  HP: http://purl.obolibrary.org/obo/HP_
+  ECO: http://purl.obolibrary.org/obo/ECO_
+  skos: http://www.w3.org/2004/02/skos/core#
+  semapv: https://w3id.org/semapv/vocab/
+  github: https://github.com/
+  obo: http://purl.obolibrary.org/obo/
+default_prefix: b2ai
+default_range: string
+annotations:
+  sssom_header: |
+    curie_map:
+      b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+      HP: http://purl.obolibrary.org/obo/HP_
+      ECO: http://purl.obolibrary.org/obo/ECO_
+      skos: http://www.w3.org/2004/02/skos/core#
+      semapv: https://w3id.org/semapv/vocab/
+      github: https://github.com/
+      obo: http://purl.obolibrary.org/obo/
+    mapping_set_id: https://github.com/sujaypatil96/b2ai-dataset-ingest/mappings/b2ai-aireadi-measurement.sssom.tsv
+    mapping_set_version: '2026-10-22'
+    license: https://creativecommons.org/publicdomain/zero/1.0/
+    mapping_provider: https://github.com/sujaypatil96/b2ai-dataset-ingest
+    creator_id:
+      - github:justaddcoffee
+    subject_source: aireadi/1.0.0
+    object_source: obo:hp
+    object_source_version: hp/releases/2026-02-16
+    mapping_tool: 'loinc2hpo (TheJacksonLaboratory/loinc2hpoAnnotation, loinc2hpo-annotations.tsv, fetched 2026-09-23) as candidate generator; every object_id verified against the pinned hp.json (obographs) and re-checked with oaklib'
+    mapping_date: '2026-09-23'
+    comment: AI-READI clinical_data/measurement.csv items mapped to HPO. EVERY ROW IS A MEASURED-VALUE MAPPING (evidence_code ECO:0007307, direct assay evidence used in automatic assertion) - the subject is an assay, the object a phenotype, and the phenotype is entailed only when the value falls outside a reference range, which is what the when_value gate encodes. The term-to-term predicate is therefore skos:relatedMatch throughout - an assay is not the phenotype - and the gate is what makes the row derive anything. ABSENT POLES ARE ASSERTED HERE, unlike the self-report sets - a normal result on a dated assay rules the abnormality out at that observation, and the derived feature carries the measurement's own time, which is what qualifies the exclusion (predicate_modifier Not; see docs/mapping-conventions.md 'Measured-value mappings'). Subjects are b2ai:measurement.<redcap_variable>, matching config/aireadi/measurement, never the concept id (3004249 backs both blood-pressure readings). THRESHOLDS, in order of preference - (1) the performing lab's published interval, UW NORC, as reproduced at docs.aireadi.org v3 clinical-lab-tests, for the import_* central-lab analytes; (2) ABIM Laboratory Test Reference Ranges (January 2025) for the site-lab CBC (lbscat_*), which AI-READI publishes no interval for; (3) guideline categories where the phenotype is category-defined (ACC/AHA 2017 blood pressure, NCEP ATP III lipids, ADA glycemia, WHO waist/WHR and BMI, ICD-11 vision impairment); each row names its source in threshold_source. The per-row range_low/range_high columns are NOT read - they are null-as-zero on every row seen in the public release. SEX-BLIND GATES - Individual.sex is redacted in the public release, so for a sex-split interval the present pole fires only where abnormal for both sexes and the absent pole only where normal for both; the band between asserts nothing (marked per row). loinc2hpo supplied the candidate term for most central-lab analytes (loinc_id + l2h_outcome record which); four of its targets were overridden and are documented in place - an obsolete term (718-7 H), a wrong analyte (30522-7 L, 4548-4 L, 2161-8 H), and pCO2 terms for a serum bicarbonate assay (2028-9). PER-EYE AND PER-FOOT items assert presence from either side and carry no absent pole, because a normal side cannot rule out the fellow side. NOT MAPPED, and why - lbscat_mchc (HPO's MCHC terms are defined as MCH, see lbscat_mch); import_a_g_ratio and import_buncreatinineratio (no HPO term; the components are mapped); import_urine_creatinine (a normaliser, and loinc2hpo's target is the serum term); height, weight and hip circumference alone (captured by BMI and WHR); mesopic acuity and contrast sensitivity (no low-luminance term in HPO); letter-count, miss-count and axis columns (inputs to the derived scores); the MoCA sub-item scores and every *_time column (no score-defined HPO terms). Confidence 0.9 = performing-lab interval, sex-agnostic; 0.85 = guideline category or sex-blind conservative band; 0.8 = age/sex-stratified table collapsed to its extremes, or an ADA/lab compromise; 0.6-0.75 = a stated approximation (unit unresolved, concentration standing in for a ratio, sphere for spherical equivalent).
+    extension_definitions:
+      - slot_name: when_value
+        property: b2ai:when_value
+        type_hint: xsd:string
+      - slot_name: when_subject
+        property: b2ai:when_subject
+        type_hint: xsd:string
+      - slot_name: evidence_code
+        property: b2ai:evidence_code
+        type_hint: xsd:string
+      - slot_name: loinc_id
+        property: b2ai:loinc_id
+        type_hint: xsd:string
+      - slot_name: l2h_outcome
+        property: b2ai:l2h_outcome
+        type_hint: xsd:string
+      - slot_name: threshold_source
+        property: b2ai:threshold_source
+        type_hint: xsd:string
+  sssom_columns: "subject_id\tsubject_label\tpredicate_id\tpredicate_modifier\tobject_id\tobject_label\t\
+    mapping_justification\tconfidence\tcomment\twhen_value\tevidence_code\tloinc_id\tl2h_outcome\tthreshold_source\t\
+    when_subject"
+classes:
+  MeasurementLbscatHct:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_hct
+    title: Hematocrit [Volume Fraction] of Blood by Automated count
+    rules:
+    - title: Reduced hematocrit, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 37
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031851
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'ABIM hematocrit F 37-47%, M 42-50%; sex-blind gate: Individual.sex is redacted in the
+          public release, so the present pole fires only where the value is abnormal for BOTH sexes and
+          the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 20570-8 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased hematocrit, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 50
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001899
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'ABIM hematocrit F 37-47%, M 42-50%; sex-blind gate: Individual.sex is redacted in the
+          public release, so the present pole fires only where the value is abnormal for BOTH sexes and
+          the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 20570-8 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Reduced hematocrit, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 42
+            maximum_value: 47
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031851
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM hematocrit F 37-47%, M 42-50%; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 20570-8 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased hematocrit, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 42
+            maximum_value: 47
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001899
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM hematocrit F 37-47%, M 42-50%; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 20570-8 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Reduced hematocrit, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 37
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031851
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for female participants (37-47), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased hematocrit, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 47
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001899
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for female participants (37-47), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Reduced hematocrit, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 37
+            maximum_value: 47
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031851
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for female participants (37-47), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased hematocrit, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 37
+            maximum_value: 47
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001899
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for female participants (37-47), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Reduced hematocrit, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 42
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031851
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for male participants (42-50), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased hematocrit, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 50
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001899
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for male participants (42-50), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Reduced hematocrit, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 42
+            maximum_value: 50
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031851
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for male participants (42-50), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased hematocrit, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 42
+            maximum_value: 50
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001899
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased hematocrit
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hematocrit F 37-47%, M 42-50%; per-sex gate for male participants (42-50), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 20570-8
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatA1c:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_a1c
+    title: Hemoglobin [Mass/volume] in Blood
+    rules:
+    - title: Decreased hemoglobin concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 12
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020062
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'THE ITEM KEY IS MISLEADING: concept 3000963 / LOINC 718-7 is total hemoglobin (g/dL),
+          not HbA1c (that is import_hba1c). ABIM hemoglobin F 12-16, M 14-18 g/dL; sex-blind gate: Individual.sex
+          is redacted in the public release, so the present pole fires only where the value is abnormal
+          for BOTH sexes and the absent pole only where it is normal for both; the band between asserts
+          nothing. Tighten per sex when sex ships; loinc2hpo 718-7 L -> HP:0020062; its H target HP:0020063
+          is OBSOLETE in hp 2026-02-16 and is replaced by HP:0001900'
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased circulating hemoglobin concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 18
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001900
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'THE ITEM KEY IS MISLEADING: concept 3000963 / LOINC 718-7 is total hemoglobin (g/dL),
+          not HbA1c (that is import_hba1c). ABIM hemoglobin F 12-16, M 14-18 g/dL; sex-blind gate: Individual.sex
+          is redacted in the public release, so the present pole fires only where the value is abnormal
+          for BOTH sexes and the absent pole only where it is normal for both; the band between asserts
+          nothing. Tighten per sex when sex ships; loinc2hpo 718-7 L -> HP:0020062; its H target HP:0020063
+          is OBSOLETE in hp 2026-02-16 and is replaced by HP:0001900'
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased hemoglobin concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 14
+            maximum_value: 16
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020062
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: THE ITEM KEY IS MISLEADING: concept 3000963 / LOINC 718-7 is total hemoglobin
+          (g/dL), not HbA1c (that is import_hba1c). ABIM hemoglobin F 12-16, M 14-18 g/dL; sex-blind gate:
+          Individual.sex is redacted in the public release, so the present pole fires only where the value
+          is abnormal for BOTH sexes and the absent pole only where it is normal for both; the band between
+          asserts nothing. Tighten per sex when sex ships; loinc2hpo 718-7 L -> HP:0020062; its H target
+          HP:0020063 is OBSOLETE in hp 2026-02-16 and is replaced by HP:0001900'
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased circulating hemoglobin concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 14
+            maximum_value: 16
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001900
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: THE ITEM KEY IS MISLEADING: concept 3000963 / LOINC 718-7 is total hemoglobin
+          (g/dL), not HbA1c (that is import_hba1c). ABIM hemoglobin F 12-16, M 14-18 g/dL; sex-blind gate:
+          Individual.sex is redacted in the public release, so the present pole fires only where the value
+          is abnormal for BOTH sexes and the absent pole only where it is normal for both; the band between
+          asserts nothing. Tighten per sex when sex ships; loinc2hpo 718-7 L -> HP:0020062; its H target
+          HP:0020063 is OBSOLETE in hp 2026-02-16 and is replaced by HP:0001900'
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased hemoglobin concentration, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 12
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020062
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for female participants (12-16),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased circulating hemoglobin concentration, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 16
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001900
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for female participants (12-16),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased hemoglobin concentration, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 12
+            maximum_value: 16
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020062
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for female participants (12-16),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased circulating hemoglobin concentration, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 12
+            maximum_value: 16
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001900
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for female participants (12-16),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased hemoglobin concentration, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 14
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020062
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for male participants (14-18), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased circulating hemoglobin concentration, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 18
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001900
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for male participants (14-18), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased hemoglobin concentration, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 14
+            maximum_value: 18
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020062
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for male participants (14-18), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased circulating hemoglobin concentration, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 14
+            maximum_value: 18
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001900
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM hemoglobin F 12-16, M 14-18 g/dL; per-sex gate for male participants (14-18), stratified
+          via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 718-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatMcv:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_mcv
+    title: MCV [Entitic mean volume] in Red Blood Cells by Automated count
+    rules:
+    - title: Decreased mean corpuscular volume, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 80
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025066
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased mean corpuscular volume
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM MCV 80-98 fL (HPO's own definition of HP:0025065 says 80-100); loinc2hpo 30428-7
+          L/H
+        evidence_code: ECO:0007307
+        loinc_id: 30428-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased mean corpuscular volume, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 98
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0005518
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased mean corpuscular volume
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM MCV 80-98 fL (HPO's own definition of HP:0025065 says 80-100); loinc2hpo 30428-7
+          L/H
+        evidence_code: ECO:0007307
+        loinc_id: 30428-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased mean corpuscular volume, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 80
+            maximum_value: 98
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025066
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased mean corpuscular volume
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM MCV 80-98 fL (HPO''s own definition of HP:0025065 says 80-100); loinc2hpo
+          30428-7 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 30428-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased mean corpuscular volume, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 80
+            maximum_value: 98
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0005518
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased mean corpuscular volume
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM MCV 80-98 fL (HPO''s own definition of HP:0025065 says 80-100); loinc2hpo
+          30428-7 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 30428-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatMch:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_mch
+    title: MCH [Entitic mass] by Automated count
+    rules:
+    - title: Decreased mean corpuscular hemoglobin concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 28
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025547
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased mean corpuscular hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'ABIM MCH 28-32 pg. TERM CAVEAT: HP:0025547/HP:0025548 are LABELLED ''mean corpuscular
+          hemoglobin concentration'' (MCHC, g/dL) but DEFINED as ''the average amount of hemoglobin per
+          red blood cell (27 to 31 picograms/cell)'', which is MCH. Mapped on the definition; lbscat_mchc
+          is left unmapped rather than mapped to the same term; worth an HPO ticket'
+        evidence_code: ECO:0007307
+        loinc_id: 28539-5
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased mean corpuscular hemoglobin concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 32
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025548
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased mean corpuscular hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'ABIM MCH 28-32 pg. TERM CAVEAT: HP:0025547/HP:0025548 are LABELLED ''mean corpuscular
+          hemoglobin concentration'' (MCHC, g/dL) but DEFINED as ''the average amount of hemoglobin per
+          red blood cell (27 to 31 picograms/cell)'', which is MCH. Mapped on the definition; lbscat_mchc
+          is left unmapped rather than mapped to the same term; worth an HPO ticket'
+        evidence_code: ECO:0007307
+        loinc_id: 28539-5
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased mean corpuscular hemoglobin concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 28
+            maximum_value: 32
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025547
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased mean corpuscular hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'absent pole: ABIM MCH 28-32 pg. TERM CAVEAT: HP:0025547/HP:0025548 are LABELLED ''mean
+          corpuscular hemoglobin concentration'' (MCHC, g/dL) but DEFINED as ''the average amount of hemoglobin
+          per red blood cell (27 to 31 picograms/cell)'', which is MCH. Mapped on the definition; lbscat_mchc
+          is left unmapped rather than mapped to the same term; worth an HPO ticket'
+        evidence_code: ECO:0007307
+        loinc_id: 28539-5
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased mean corpuscular hemoglobin concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 28
+            maximum_value: 32
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025548
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased mean corpuscular hemoglobin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'absent pole: ABIM MCH 28-32 pg. TERM CAVEAT: HP:0025547/HP:0025548 are LABELLED ''mean
+          corpuscular hemoglobin concentration'' (MCHC, g/dL) but DEFINED as ''the average amount of hemoglobin
+          per red blood cell (27 to 31 picograms/cell)'', which is MCH. Mapped on the definition; lbscat_mchc
+          is left unmapped rather than mapped to the same term; worth an HPO ticket'
+        evidence_code: ECO:0007307
+        loinc_id: 28539-5
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatRdw:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_rdw
+    title: Erythrocyte [DistWidth] in Blood by Automated count
+    rules:
+    - title: Increased RBC distribution width, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 14.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031965
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased RBC distribution width
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM RDW 9.0-14.5%; HPO carries only the increased pole
+        evidence_code: ECO:0007307
+        loinc_id: 30385-9
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased RBC distribution width, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 9
+            maximum_value: 14.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031965
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased RBC distribution width
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: RDW within the ABIM interval'
+        evidence_code: ECO:0007307
+        loinc_id: 30385-9
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatPlt:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_plt
+    title: Platelets [#/volume] in Blood by Automated count
+    rules:
+    - title: Thrombocytopenia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 150
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001873
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Thrombocytopenia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM platelets 150-450 x10E3/uL; loinc2hpo 26515-7 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 26515-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Thrombocytosis, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 450
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001894
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Thrombocytosis
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM platelets 150-450 x10E3/uL; loinc2hpo 26515-7 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 26515-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Thrombocytopenia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 150
+            maximum_value: 450
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001873
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Thrombocytopenia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM platelets 150-450 x10E3/uL; loinc2hpo 26515-7 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 26515-7
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Thrombocytosis, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 150
+            maximum_value: 450
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001894
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Thrombocytosis
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM platelets 150-450 x10E3/uL; loinc2hpo 26515-7 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 26515-7
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatWbc:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_wbc
+    title: Leukocytes [#/volume] in Blood by Automated count
+    rules:
+    - title: Decreased total leukocyte count, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 4
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001882
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased total leukocyte count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM leukocytes 4.0-11.0 x10E3/uL; AI-READI-local concept 2005200182, LOINC 6690-2 verified
+          for the analyte in config
+        evidence_code: ECO:0007307
+        loinc_id: 6690-2
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased total leukocyte count, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 11
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001974
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased total leukocyte count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM leukocytes 4.0-11.0 x10E3/uL; AI-READI-local concept 2005200182, LOINC 6690-2 verified
+          for the analyte in config
+        evidence_code: ECO:0007307
+        loinc_id: 6690-2
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased total leukocyte count, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 4
+            maximum_value: 11
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001882
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased total leukocyte count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM leukocytes 4.0-11.0 x10E3/uL; AI-READI-local concept 2005200182, LOINC
+          6690-2 verified for the analyte in config'
+        evidence_code: ECO:0007307
+        loinc_id: 6690-2
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased total leukocyte count, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 4
+            maximum_value: 11
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001974
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased total leukocyte count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM leukocytes 4.0-11.0 x10E3/uL; AI-READI-local concept 2005200182, LOINC
+          6690-2 verified for the analyte in config'
+        evidence_code: ECO:0007307
+        loinc_id: 6690-2
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementLbscatRbc:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.lbscat_rbc
+    title: Erythrocytes [#/volume] in Blood by Automated count
+    rules:
+    - title: Decreased red blood cell count, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 4.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020060
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased red blood cell count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM erythrocyte count 4.2-5.9 x10E6/uL, not sex-split in that source; AI-READI-local
+          concept 2005200183
+        evidence_code: ECO:0007307
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased red blood cell count, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 5.9
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020059
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased red blood cell count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ABIM erythrocyte count 4.2-5.9 x10E6/uL, not sex-split in that source; AI-READI-local
+          concept 2005200183
+        evidence_code: ECO:0007307
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased red blood cell count, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 4.2
+            maximum_value: 5.9
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020060
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased red blood cell count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM erythrocyte count 4.2-5.9 x10E6/uL, not sex-split in that source;
+          AI-READI-local concept 2005200183'
+        evidence_code: ECO:0007307
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Increased red blood cell count, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 4.2
+            maximum_value: 5.9
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0020059
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased red blood cell count
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: ABIM erythrocyte count 4.2-5.9 x10E6/uL, not sex-split in that source;
+          AI-READI-local concept 2005200183'
+        evidence_code: ECO:0007307
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementImportGlucose:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_glucose
+    title: Glucose [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Hyperglycemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 125
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003074
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperglycemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC interval 62-125 mg/dL; ADA fasting-glucose diabetes threshold is >=126, so the two
+          agree at the top. FASTING STATE IS NOT ASSERTED by the row (paate 'hours since last ate' is
+          an uningested observation item), so a post-prandial value can fire this; loinc2hpo 2345-7 H
+        evidence_code: ECO:0007307
+        loinc_id: 2345-7
+        l2h_outcome: H
+        threshold_source: ADA Standards of Care glycemic thresholds, with the UW NORC lab interval
+    - title: Hypoglycemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 62
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001943
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypoglycemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC lower bound 62 mg/dL, below the ADA level-1 hypoglycemia threshold of 70, so this
+          is the conservative pole; loinc2hpo 2345-7 L
+        evidence_code: ECO:0007307
+        loinc_id: 2345-7
+        l2h_outcome: L
+        threshold_source: ADA Standards of Care glycemic thresholds, with the UW NORC lab interval
+    - title: Hyperglycemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 62
+            maximum_value: 125
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003074
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperglycemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: within the NORC interval'
+        evidence_code: ECO:0007307
+        loinc_id: 2345-7
+        l2h_outcome: H
+        threshold_source: ADA Standards of Care glycemic thresholds, with the UW NORC lab interval
+    - title: Hypoglycemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 62
+            maximum_value: 125
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001943
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypoglycemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: within the NORC interval'
+        evidence_code: ECO:0007307
+        loinc_id: 2345-7
+        l2h_outcome: L
+        threshold_source: ADA Standards of Care glycemic thresholds, with the UW NORC lab interval
+  MeasurementImportHba1c:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_hba1c
+    title: Hemoglobin A1c/Hemoglobin.total in Blood
+    rules:
+    - title: Elevated hemoglobin A1c, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 6
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0040217
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated hemoglobin A1c
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC interval 4.0-6.0%; above 6.0 is also inside the ADA prediabetes band (5.7-6.4) or
+          diabetes range (>=6.5), so lab and guideline agree; loinc2hpo 4548-4 H. loinc2hpo's L target
+          HP:0011905 'Reduced hemoglobin A' is the HbA fraction, not HbA1c, and is not used
+        evidence_code: ECO:0007307
+        loinc_id: 4548-4
+        l2h_outcome: H
+        threshold_source: ADA Standards of Care glycemic thresholds, with the UW NORC lab interval
+    - title: Elevated hemoglobin A1c, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 4
+            none_of:
+            - minimum_value: 5.7
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0040217
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated hemoglobin A1c
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: normal by BOTH the NORC interval and the ADA threshold (below 5.7); 5.7-6.0
+          is inside the lab interval but ADA-prediabetic and asserts nothing'
+        evidence_code: ECO:0007307
+        loinc_id: 4548-4
+        l2h_outcome: H
+        threshold_source: ADA Standards of Care glycemic thresholds, with the UW NORC lab interval
+  MeasurementImportCalcium:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_calcium
+    title: Calcium [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Hypocalcemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 8.9
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002901
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypocalcemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC calcium 8.9-10.2 mg/dL. NOTE the shipped config declares the unit as mEq/L; the
+          lab reports mg/dL and this interval is mg/dL -- confirm before trusting either; loinc2hpo 17861-6
+        evidence_code: ECO:0007307
+        loinc_id: 17861-6
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypercalcemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 10.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003072
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypercalcemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC calcium 8.9-10.2 mg/dL. NOTE the shipped config declares the unit as mEq/L; the
+          lab reports mg/dL and this interval is mg/dL -- confirm before trusting either; loinc2hpo 17861-6
+        evidence_code: ECO:0007307
+        loinc_id: 17861-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypocalcemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 8.9
+            maximum_value: 10.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002901
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypocalcemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC calcium 8.9-10.2 mg/dL. NOTE the shipped config declares the unit
+          as mEq/L; the lab reports mg/dL and this interval is mg/dL -- confirm before trusting either;
+          loinc2hpo 17861-6'
+        evidence_code: ECO:0007307
+        loinc_id: 17861-6
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypercalcemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 8.9
+            maximum_value: 10.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003072
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypercalcemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC calcium 8.9-10.2 mg/dL. NOTE the shipped config declares the unit
+          as mEq/L; the lab reports mg/dL and this interval is mg/dL -- confirm before trusting either;
+          loinc2hpo 17861-6'
+        evidence_code: ECO:0007307
+        loinc_id: 17861-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportSodium:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_sodium
+    title: Sodium [Moles/volume] in Serum or Plasma
+    rules:
+    - title: Hyponatremia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 135
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002902
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyponatremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC sodium 135-145 mEq/L; loinc2hpo 2951-2 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2951-2
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypernatremia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 145
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003228
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypernatremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC sodium 135-145 mEq/L; loinc2hpo 2951-2 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2951-2
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyponatremia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 135
+            maximum_value: 145
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002902
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyponatremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC sodium 135-145 mEq/L; loinc2hpo 2951-2 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2951-2
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypernatremia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 135
+            maximum_value: 145
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003228
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypernatremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC sodium 135-145 mEq/L; loinc2hpo 2951-2 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2951-2
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportPotassium:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_potassium
+    title: Potassium [Moles/volume] in Serum or Plasma
+    rules:
+    - title: Hypokalemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 3.6
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002900
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypokalemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC potassium 3.6-5.2 mEq/L; loinc2hpo 2823-3 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2823-3
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperkalemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 5.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002153
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperkalemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC potassium 3.6-5.2 mEq/L; loinc2hpo 2823-3 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2823-3
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypokalemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 3.6
+            maximum_value: 5.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002900
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypokalemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC potassium 3.6-5.2 mEq/L; loinc2hpo 2823-3 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2823-3
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperkalemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 3.6
+            maximum_value: 5.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002153
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperkalemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC potassium 3.6-5.2 mEq/L; loinc2hpo 2823-3 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2823-3
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportChloride:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_chloride
+    title: Chloride [Moles/volume] in Serum or Plasma
+    rules:
+    - title: Hypochloremia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 98
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003113
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypochloremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC chloride 98-108 mEq/L; loinc2hpo 2075-0 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2075-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperchloremia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 108
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0011423
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperchloremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC chloride 98-108 mEq/L; loinc2hpo 2075-0 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2075-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypochloremia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 98
+            maximum_value: 108
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003113
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypochloremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC chloride 98-108 mEq/L; loinc2hpo 2075-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2075-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperchloremia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 98
+            maximum_value: 108
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0011423
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperchloremia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC chloride 98-108 mEq/L; loinc2hpo 2075-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2075-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportCarbonDioxideTotal:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_carbon_dioxide_total
+    title: Carbon dioxide, total [Moles/volume] in Serum or Plasma
+    rules:
+    - title: Decreased serum bicarbonate concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 22
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032066
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum bicarbonate concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC total CO2 22-32 mEq/L. loinc2hpo maps 2028-9 to Hypocapnia/Hypercapnia, which are
+          blood CO2 partial-pressure terms; serum total CO2 is ~95% bicarbonate, so the serum bicarbonate
+          terms are used instead
+        evidence_code: ECO:0007307
+        loinc_id: 2028-9
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated serum bicarbonate concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 32
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032067
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated serum bicarbonate concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC total CO2 22-32 mEq/L. loinc2hpo maps 2028-9 to Hypocapnia/Hypercapnia, which are
+          blood CO2 partial-pressure terms; serum total CO2 is ~95% bicarbonate, so the serum bicarbonate
+          terms are used instead
+        evidence_code: ECO:0007307
+        loinc_id: 2028-9
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased serum bicarbonate concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 22
+            maximum_value: 32
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032066
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum bicarbonate concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC total CO2 22-32 mEq/L. loinc2hpo maps 2028-9 to Hypocapnia/Hypercapnia,
+          which are blood CO2 partial-pressure terms; serum total CO2 is ~95% bicarbonate, so the serum
+          bicarbonate terms are used instead'
+        evidence_code: ECO:0007307
+        loinc_id: 2028-9
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated serum bicarbonate concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 22
+            maximum_value: 32
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032067
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated serum bicarbonate concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC total CO2 22-32 mEq/L. loinc2hpo maps 2028-9 to Hypocapnia/Hypercapnia,
+          which are blood CO2 partial-pressure terms; serum total CO2 is ~95% bicarbonate, so the serum
+          bicarbonate terms are used instead'
+        evidence_code: ECO:0007307
+        loinc_id: 2028-9
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportBun:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_bun
+    title: Urea nitrogen [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Reduced blood urea nitrogen, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 8
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031969
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced blood urea nitrogen
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC BUN 8.0-21.0 mg/dL; loinc2hpo 3094-0 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 3094-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased blood urea nitrogen, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 21
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003138
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased blood urea nitrogen
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC BUN 8.0-21.0 mg/dL; loinc2hpo 3094-0 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 3094-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Reduced blood urea nitrogen, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 8
+            maximum_value: 21
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031969
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced blood urea nitrogen
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC BUN 8.0-21.0 mg/dL; loinc2hpo 3094-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 3094-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased blood urea nitrogen, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 8
+            maximum_value: 21
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003138
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased blood urea nitrogen
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC BUN 8.0-21.0 mg/dL; loinc2hpo 3094-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 3094-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportCreatinine:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_creatinine
+    title: Creatinine [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Decreased serum creatinine, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 0.38
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012101
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum creatinine
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 2160-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating creatinine concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 1.18
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003259
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating creatinine concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 2160-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased serum creatinine, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.51
+            maximum_value: 1.02
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012101
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum creatinine
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; sex-blind gate: Individual.sex
+          is redacted in the public release, so the present pole fires only where the value is abnormal
+          for BOTH sexes and the absent pole only where it is normal for both; the band between asserts
+          nothing. Tighten per sex when sex ships; loinc2hpo 2160-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating creatinine concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.51
+            maximum_value: 1.02
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003259
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating creatinine concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; sex-blind gate: Individual.sex
+          is redacted in the public release, so the present pole fires only where the value is abnormal
+          for BOTH sexes and the absent pole only where it is normal for both; the band between asserts
+          nothing. Tighten per sex when sex ships; loinc2hpo 2160-0 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased serum creatinine, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 0.38
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012101
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum creatinine
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for female participants
+          (0.38-1.02), stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating creatinine concentration, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 1.02
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003259
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating creatinine concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for female participants
+          (0.38-1.02), stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased serum creatinine, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.38
+            maximum_value: 1.02
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012101
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum creatinine
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for female participants
+          (0.38-1.02), stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating creatinine concentration, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.38
+            maximum_value: 1.02
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003259
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating creatinine concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for female participants
+          (0.38-1.02), stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased serum creatinine, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 0.51
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012101
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum creatinine
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for male participants (0.51-1.18),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating creatinine concentration, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 1.18
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003259
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating creatinine concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for male participants (0.51-1.18),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased serum creatinine, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.51
+            maximum_value: 1.18
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012101
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased serum creatinine
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for male participants (0.51-1.18),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating creatinine concentration, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.51
+            maximum_value: 1.18
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003259
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating creatinine concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC creatinine F 0.38-1.02, M 0.51-1.18 mg/dL; per-sex gate for male participants (0.51-1.18),
+          stratified via when_subject now that the demographics supplement carries sex
+        evidence_code: ECO:0007307
+        loinc_id: 2160-0
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportProteinTotal:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_protein_total
+    title: Total protein [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Hypoproteinemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 6
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003075
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypoproteinemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC total protein 6.0-8.2 g/dL; loinc2hpo 2885-2 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2885-2
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperproteinemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 8.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002152
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperproteinemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC total protein 6.0-8.2 g/dL; loinc2hpo 2885-2 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 2885-2
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypoproteinemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 6
+            maximum_value: 8.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003075
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypoproteinemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC total protein 6.0-8.2 g/dL; loinc2hpo 2885-2 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2885-2
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperproteinemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 6
+            maximum_value: 8.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002152
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperproteinemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC total protein 6.0-8.2 g/dL; loinc2hpo 2885-2 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 2885-2
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportAlbumin:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_albumin
+    title: Albumin [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Hypoalbuminemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 3.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003073
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypoalbuminemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC albumin 3.5-5.2 g/dL; loinc2hpo 1751-7 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 1751-7
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperalbuminemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 5.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012117
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperalbuminemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC albumin 3.5-5.2 g/dL; loinc2hpo 1751-7 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 1751-7
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hypoalbuminemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 3.5
+            maximum_value: 5.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003073
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypoalbuminemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC albumin 3.5-5.2 g/dL; loinc2hpo 1751-7 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 1751-7
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Hyperalbuminemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 3.5
+            maximum_value: 5.2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012117
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperalbuminemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: NORC albumin 3.5-5.2 g/dL; loinc2hpo 1751-7 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 1751-7
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportGlobulinTotal:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_globulin_total
+    title: Globulin [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Decreased circulating globulin concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 2
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032312
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased circulating globulin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC publishes no interval for the calculated globulin; ABIM 2.0-3.5 g/dL; loinc2hpo
+          2336-6
+        evidence_code: ECO:0007307
+        loinc_id: 2336-6
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Elevated circulating globulin concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 3.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032311
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating globulin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC publishes no interval for the calculated globulin; ABIM 2.0-3.5 g/dL; loinc2hpo
+          2336-6
+        evidence_code: ECO:0007307
+        loinc_id: 2336-6
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Decreased circulating globulin concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 2
+            maximum_value: 3.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032312
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased circulating globulin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: NORC publishes no interval for the calculated globulin; ABIM 2.0-3.5 g/dL;
+          loinc2hpo 2336-6'
+        evidence_code: ECO:0007307
+        loinc_id: 2336-6
+        l2h_outcome: L
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+    - title: Elevated circulating globulin concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 2
+            maximum_value: 3.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032311
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating globulin concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: NORC publishes no interval for the calculated globulin; ABIM 2.0-3.5 g/dL;
+          loinc2hpo 2336-6'
+        evidence_code: ECO:0007307
+        loinc_id: 2336-6
+        l2h_outcome: H
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025 (site CBC has no published
+          AI-READI interval)
+  MeasurementImportAltGot:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_alt_got
+    title: Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma
+    rules:
+    - title: Elevated circulating alanine aminotransferase concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 64
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031964
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alanine aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'NORC ALT F 7-33, M <50y 10-64, M 50+ 10-48 IU/L; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 1742-6 H'
+        evidence_code: ECO:0007307
+        loinc_id: 1742-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating alanine aminotransferase concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 10
+            maximum_value: 33
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031964
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alanine aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: within every NORC sex/age band'
+        evidence_code: ECO:0007307
+        loinc_id: 1742-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating alanine aminotransferase concentration, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 33
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031964
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alanine aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC ALT F 7-33 IU/L; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 1742-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating alanine aminotransferase concentration, present, sex == "MALE" & age
+        <50
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 64
+          sex:
+            equals_string: MALE
+          age:
+            none_of:
+            - minimum_value: 50
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031964
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alanine aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC ALT M <50y 10-64 IU/L; sex- and age-stratified gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 1742-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating alanine aminotransferase concentration, present, sex == "MALE" & age
+        >=50
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 48
+          sex:
+            equals_string: MALE
+          age:
+            minimum_value: 50
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031964
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alanine aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC ALT M 50+ 10-48 IU/L; sex- and age-stratified gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 1742-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportAstGot:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_ast_got
+    title: Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma
+    rules:
+    - title: Elevated circulating aspartate aminotransferase concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 38
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031956
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating aspartate aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'NORC AST 9-38 IU/L; loinc2hpo 1920-8 H. The reduced pole (HP:0430136) is not emitted:
+          a low AST is not a clinical finding'
+        evidence_code: ECO:0007307
+        loinc_id: 1920-8
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating aspartate aminotransferase concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 9
+            maximum_value: 38
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031956
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating aspartate aminotransferase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: within the NORC interval'
+        evidence_code: ECO:0007307
+        loinc_id: 1920-8
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportAlkalinePhosphatase:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_alkaline_phosphatase
+    title: Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma
+    rules:
+    - title: Decreased circulating alkaline phosphatase activity, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 25
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003282
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased circulating alkaline phosphatase activity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC publishes an age- and sex-stratified table (adult lower bounds 25-52, upper bounds
+          98-227 IU/L). Age and sex are not joined here, so the present poles fire only outside EVERY
+          adult band and the absent poles only inside all of them; loinc2hpo 6768-6 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 6768-6
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating alkaline phosphatase concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 227
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003155
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alkaline phosphatase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC publishes an age- and sex-stratified table (adult lower bounds 25-52, upper bounds
+          98-227 IU/L). Age and sex are not joined here, so the present poles fire only outside EVERY
+          adult band and the absent poles only inside all of them; loinc2hpo 6768-6 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 6768-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Decreased circulating alkaline phosphatase activity, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 52
+            maximum_value: 98
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003282
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased circulating alkaline phosphatase activity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: NORC publishes an age- and sex-stratified table (adult lower bounds 25-52,
+          upper bounds 98-227 IU/L). Age and sex are not joined here, so the present poles fire only outside
+          EVERY adult band and the absent poles only inside all of them; loinc2hpo 6768-6 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 6768-6
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating alkaline phosphatase concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 52
+            maximum_value: 98
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003155
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating alkaline phosphatase concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: NORC publishes an age- and sex-stratified table (adult lower bounds 25-52,
+          upper bounds 98-227 IU/L). Age and sex are not joined here, so the present poles fire only outside
+          EVERY adult band and the absent poles only inside all of them; loinc2hpo 6768-6 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 6768-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportBilirubinTotal:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_bilirubin_total
+    title: Bilirubin.total [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Increased total bilirubin, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 1.3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003573
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased total bilirubin
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'NORC total bilirubin 0.2-1.3 mg/dL; loinc2hpo 1975-2 H. Hypobilirubinemia (HP:0033480)
+          is not emitted: not a recognised finding at this lower bound'
+        evidence_code: ECO:0007307
+        loinc_id: 1975-2
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased total bilirubin, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.2
+            maximum_value: 1.3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003573
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased total bilirubin
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: 'absent pole: within the NORC interval'
+        evidence_code: ECO:0007307
+        loinc_id: 1975-2
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportTotalCholesterol:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_total_cholesterol
+    title: Cholesterol [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Hypercholesterolemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 240
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003124
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypercholesterolemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'NORC desirable <200 mg/dL; NCEP ''high'' is >=240 and 200-239 ''borderline-high''. Present
+          only at the guideline-high level; the borderline band asserts nothing; loinc2hpo 2093-3 H. Hypocholesterolemia
+          is not emitted: neither source gives a lower bound'
+        evidence_code: ECO:0007307
+        loinc_id: 2093-3
+        l2h_outcome: H
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+    - title: Hypercholesterolemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 200
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003124
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypercholesterolemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: NORC desirable range'
+        evidence_code: ECO:0007307
+        loinc_id: 2093-3
+        l2h_outcome: H
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+  MeasurementImportLdlCholesterol:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_ldl_cholesterol
+    title: Cholesterol in LDL [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Increased LDL cholesterol concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 160
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003141
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased LDL cholesterol concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC <130 mg/dL; NCEP 'high' >=160, 130-159 'borderline-high' asserts nothing; calculated
+          LDL; loinc2hpo 13457-7 H
+        evidence_code: ECO:0007307
+        loinc_id: 13457-7
+        l2h_outcome: H
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+    - title: Increased LDL cholesterol concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 130
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003141
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased LDL cholesterol concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: within the NORC interval'
+        evidence_code: ECO:0007307
+        loinc_id: 13457-7
+        l2h_outcome: H
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+  MeasurementImportHdlCholesterol:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_hdl_cholesterol
+    title: Cholesterol in HDL [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Decreased HDL cholesterol concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 40
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003233
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased HDL cholesterol concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'NORC >39 mg/dL; ABIM low HDL F <50, M <40; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 2085-9 L. The increased pole (HP:0012184) is not emitted:
+          >=60 is protective, not a finding'
+        evidence_code: ECO:0007307
+        loinc_id: 2085-9
+        l2h_outcome: L
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+    - title: Decreased HDL cholesterol concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 50
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003233
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased HDL cholesterol concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: normal for both sexes'
+        evidence_code: ECO:0007307
+        loinc_id: 2085-9
+        l2h_outcome: L
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+    - title: Decreased HDL cholesterol concentration, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 50
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003233
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased HDL cholesterol concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM low HDL F <50 mg/dL; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 2085-9
+        l2h_outcome: L
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+    - title: Decreased HDL cholesterol concentration, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 40
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0003233
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased HDL cholesterol concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: ABIM low HDL M <40 mg/dL; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 2085-9
+        l2h_outcome: L
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+  MeasurementImportTriglycerides:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_triglycerides
+    title: Triglyceride [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Hypertriglyceridemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 200
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002155
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypertriglyceridemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC <150 mg/dL; NCEP 'high' >=200, 150-199 'borderline-high' asserts nothing; fasting
+          state not asserted by the row; loinc2hpo 2571-8 H
+        evidence_code: ECO:0007307
+        loinc_id: 2571-8
+        l2h_outcome: H
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+    - title: Hypertriglyceridemia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 150
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002155
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypertriglyceridemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: within the NORC interval'
+        evidence_code: ECO:0007307
+        loinc_id: 2571-8
+        l2h_outcome: H
+        threshold_source: NCEP ATP III lipid categories as reproduced in ABIM 2025; lab interval from
+          UW NORC
+  MeasurementImportCrpHs:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_crp_hs
+    title: C reactive protein [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Elevated circulating C-reactive protein concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 10
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0011227
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating C-reactive protein concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: NORC hs-CRP 0.0-10.0 mg/L; loinc2hpo 30522-7 H. loinc2hpo's L row points at HP:0030795
+          (C-peptide), an upstream error, and is not used
+        evidence_code: ECO:0007307
+        loinc_id: 30522-7
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating C-reactive protein concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            maximum_value: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0011227
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating C-reactive protein concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: AHA low/average cardiovascular-risk band (<=3 mg/L), well inside the lab
+          interval; 3-10 asserts nothing'
+        evidence_code: ECO:0007307
+        loinc_id: 30522-7
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportNtProbnp:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_nt_probnp
+    title: Natriuretic peptide B [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Elevated circulating NT-proBNP concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 540
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031185
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating NT-proBNP concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: NORC publishes an age/sex table (adult upper bounds 72-540 pg/mL); present only above
+          every adult band. HPO has an NT-proBNP-specific term; loinc2hpo's HP:0033534 is the BNP term
+          and is not used. Below-detection rows are censored upstream and never reach this gate
+        evidence_code: ECO:0007307
+        loinc_id: 33762-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Elevated circulating NT-proBNP concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            maximum_value: 72
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031185
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated circulating NT-proBNP concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'absent pole: inside every adult NORC band'
+        evidence_code: ECO:0007307
+        loinc_id: 33762-6
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportTroponinT:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_troponin_t
+    title: Troponin T.cardiac [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Increased circulating troponin T concentration, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 16
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0410174
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating troponin T concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'NORC hs-troponin T normal F <11, M <16 ng/L; sex-blind gate: Individual.sex is redacted
+          in the public release, so the present pole fires only where the value is abnormal for BOTH sexes
+          and the absent pole only where it is normal for both; the band between asserts nothing. Tighten
+          per sex when sex ships; loinc2hpo 67151-1 H'
+        evidence_code: ECO:0007307
+        loinc_id: 67151-1
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased circulating troponin T concentration, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 11
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0410174
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating troponin T concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: normal for both sexes'
+        evidence_code: ECO:0007307
+        loinc_id: 67151-1
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased circulating troponin T concentration, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 11
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0410174
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating troponin T concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC hs-troponin T normal F <11 ng/L; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 67151-1
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased circulating troponin T concentration, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 16
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0410174
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased circulating troponin T concentration
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: NORC hs-troponin T normal M <16 ng/L; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 67151-1
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportInsulin:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_insulin
+    title: Insulin [Units/volume] in Serum or Plasma
+    rules:
+    - title: Hyperinsulinemia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 24.9
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000842
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hyperinsulinemia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.6'
+        comment: 'NORC insulin 0.0-24.9. UNIT UNRESOLVED: the docs table says ng/mL, the interval reads
+          like uIU/mL, and the shipped config declares ng/L. Kept at low confidence with no absent pole
+          until the unit is confirmed; loinc2hpo 20448-7 H'
+        evidence_code: ECO:0007307
+        loinc_id: 20448-7
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportCPeptide:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_c_peptide
+    title: C peptide [Mass/volume] in Serum or Plasma
+    rules:
+    - title: Reduced C-peptide level, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 1.1
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0030795
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced C-peptide level
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: NORC C-peptide 1.1-4.4 ng/mL (config declares ng/L -- confirm); loinc2hpo 1986-9 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 1986-9
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased C-peptide level, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 4.4
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0030796
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased C-peptide level
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: NORC C-peptide 1.1-4.4 ng/mL (config declares ng/L -- confirm); loinc2hpo 1986-9 L/H
+        evidence_code: ECO:0007307
+        loinc_id: 1986-9
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Reduced C-peptide level, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 1.1
+            maximum_value: 4.4
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0030795
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced C-peptide level
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: 'absent pole: NORC C-peptide 1.1-4.4 ng/mL (config declares ng/L -- confirm); loinc2hpo
+          1986-9 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 1986-9
+        l2h_outcome: L
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+    - title: Increased C-peptide level, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 1.1
+            maximum_value: 4.4
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0030796
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased C-peptide level
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: 'absent pole: NORC C-peptide 1.1-4.4 ng/mL (config declares ng/L -- confirm); loinc2hpo
+          1986-9 L/H'
+        evidence_code: ECO:0007307
+        loinc_id: 1986-9
+        l2h_outcome: H
+        threshold_source: AI-READI performing-lab reference interval (UW NORC; docs.aireadi.org v3 clinical-lab-tests)
+  MeasurementImportUrineAlbumin:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.import_urine_albumin
+    title: Albumin [Mass/volume] in Urine
+    rules:
+    - title: Albuminuria, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 30
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012592
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Albuminuria
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.6'
+        comment: 'Spot urine albumin CONCENTRATION (ug/mL = mg/L), not the albumin/creatinine ratio KDIGO
+          defines A2 on; the ratio needs import_urine_creatinine joined and is not computed here. No absent
+          pole: a low concentration can be dilution; loinc2hpo 1754-1 H'
+        evidence_code: ECO:0007307
+        loinc_id: 1754-1
+        l2h_outcome: H
+        threshold_source: KDIGO 2012 albuminuria category A2 (>= 30 mg/g creatinine), applied to spot
+          concentration
+  MeasurementBp1SysbpVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.bp1_sysbp_vsorres
+    title: Systolic blood pressure
+    rules:
+    - title: Elevated systolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 130
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0004421
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated systolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ACC/AHA 2017 stage-1 hypertension starts at 130; 120-129 ('Elevated') asserts nothing.
+          The guideline is for averaged readings and each of the two readings gates alone; the reader
+          keeps one feature per time and lets presence win; loinc2hpo 8480-6 H
+        evidence_code: ECO:0007307
+        loinc_id: 8480-6
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Elevated systolic blood pressure, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 120
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0004421
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated systolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: AHA ''Normal'''
+        evidence_code: ECO:0007307
+        loinc_id: 8480-6
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Decreased systolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 90
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0500105
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased systolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: loinc2hpo 8480-6 L
+        evidence_code: ECO:0007307
+        loinc_id: 8480-6
+        l2h_outcome: L
+        threshold_source: common clinical definition of hypotension (< 90/60 mmHg); AHA defines no low
+          category
+  MeasurementBp2SysbpVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.bp2_sysbp_vsorres
+    title: Systolic blood pressure
+    rules:
+    - title: Elevated systolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 130
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0004421
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated systolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: ACC/AHA 2017 stage-1 hypertension starts at 130; 120-129 ('Elevated') asserts nothing.
+          The guideline is for averaged readings and each of the two readings gates alone; the reader
+          keeps one feature per time and lets presence win; loinc2hpo 8480-6 H
+        evidence_code: ECO:0007307
+        loinc_id: 8480-6
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Elevated systolic blood pressure, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 120
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0004421
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated systolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: AHA ''Normal'''
+        evidence_code: ECO:0007307
+        loinc_id: 8480-6
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Decreased systolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 90
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0500105
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased systolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: loinc2hpo 8480-6 L
+        evidence_code: ECO:0007307
+        loinc_id: 8480-6
+        l2h_outcome: L
+        threshold_source: common clinical definition of hypotension (< 90/60 mmHg); AHA defines no low
+          category
+  MeasurementBp1DiabpVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.bp1_diabp_vsorres
+    title: Diastolic blood pressure
+    rules:
+    - title: Elevated diastolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 80
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0005117
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated diastolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'ACC/AHA 2017: diastolic 80-89 is stage 1, >=90 stage 2; AHA has no ''elevated'' band
+          for diastolic; loinc2hpo 8462-4 H'
+        evidence_code: ECO:0007307
+        loinc_id: 8462-4
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Elevated diastolic blood pressure, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 80
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0005117
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated diastolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: AHA ''Normal'''
+        evidence_code: ECO:0007307
+        loinc_id: 8462-4
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Decreased diastolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 60
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0500104
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased diastolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: loinc2hpo 8462-4 L
+        evidence_code: ECO:0007307
+        loinc_id: 8462-4
+        l2h_outcome: L
+        threshold_source: common clinical definition of hypotension (< 90/60 mmHg); AHA defines no low
+          category
+  MeasurementBp2DiabpVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.bp2_diabp_vsorres
+    title: Diastolic blood pressure
+    rules:
+    - title: Elevated diastolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 80
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0005117
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated diastolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'ACC/AHA 2017: diastolic 80-89 is stage 1, >=90 stage 2; AHA has no ''elevated'' band
+          for diastolic; loinc2hpo 8462-4 H'
+        evidence_code: ECO:0007307
+        loinc_id: 8462-4
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Elevated diastolic blood pressure, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 80
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0005117
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Elevated diastolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: AHA ''Normal'''
+        evidence_code: ECO:0007307
+        loinc_id: 8462-4
+        l2h_outcome: H
+        threshold_source: 2017 ACC/AHA blood pressure categories (heart.org; reproduced at docs.aireadi.org
+          physical-assessment)
+    - title: Decreased diastolic blood pressure, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 60
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0500104
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased diastolic blood pressure
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: loinc2hpo 8462-4 L
+        evidence_code: ECO:0007307
+        loinc_id: 8462-4
+        l2h_outcome: L
+        threshold_source: common clinical definition of hypotension (< 90/60 mmHg); AHA defines no low
+          category
+  MeasurementPulseVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.pulse_vsorres
+    title: Heart rate
+    rules:
+    - title: Bradycardia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 60
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001662
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Bradycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: resting rate from the oscillometric cuff; two readings gate independently
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+    - title: Tachycardia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 100
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001649
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Tachycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: resting rate from the oscillometric cuff; two readings gate independently
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+    - title: Bradycardia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 60
+            maximum_value: 100
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001662
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Bradycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: resting rate from the oscillometric cuff; two readings gate independently'
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+    - title: Tachycardia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 60
+            maximum_value: 100
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001649
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Tachycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: resting rate from the oscillometric cuff; two readings gate independently'
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+  MeasurementPulseVsorres2:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.pulse_vsorres_2
+    title: Heart rate
+    rules:
+    - title: Bradycardia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 60
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001662
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Bradycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: resting rate from the oscillometric cuff; two readings gate independently
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+    - title: Tachycardia, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 100
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001649
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Tachycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: resting rate from the oscillometric cuff; two readings gate independently
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+    - title: Bradycardia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 60
+            maximum_value: 100
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001662
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Bradycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: resting rate from the oscillometric cuff; two readings gate independently'
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+    - title: Tachycardia, absent
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 60
+            maximum_value: 100
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001649
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Tachycardia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: resting rate from the oscillometric cuff; two readings gate independently'
+        evidence_code: ECO:0007307
+        loinc_id: 8867-4
+        threshold_source: AHA resting heart rate 60-100 bpm (docs.aireadi.org physical-assessment)
+  MeasurementBmiVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.bmi_vsorres
+    title: Body mass index (BMI) [Ratio]
+    rules:
+    - title: Obesity, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 30
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001513
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: BMI >= 30 kg/m2 (HPO class I-III terms exist below HP:0001513 and can be added later)
+        evidence_code: ECO:0007307
+        loinc_id: 39156-5
+        threshold_source: WHO/CDC BMI categories (docs.aireadi.org physical-assessment)
+    - title: Overweight, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 25
+            none_of:
+            - minimum_value: 30
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0025502
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Overweight
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: HP:0025502 is DEFINED as BMI 25-29.9
+        evidence_code: ECO:0007307
+        loinc_id: 39156-5
+        threshold_source: WHO/CDC BMI categories (docs.aireadi.org physical-assessment)
+    - title: Decreased body weight, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 18.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0004325
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Decreased body weight
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: underweight
+        evidence_code: ECO:0007307
+        loinc_id: 39156-5
+        threshold_source: WHO/CDC BMI categories (docs.aireadi.org physical-assessment)
+    - title: Obesity, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 25
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001513
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: BMI-defined obesity ruled out below 25 (25-29.9 asserts Overweight present)'
+        evidence_code: ECO:0007307
+        loinc_id: 39156-5
+        threshold_source: WHO/CDC BMI categories (docs.aireadi.org physical-assessment)
+  MeasurementWaistVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.waist_vsorres
+    title: Waist Circumference at umbilicus by Tape measure
+    rules:
+    - title: Abdominal obesity, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 102
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012743
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Abdominal obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'sex-blind gate: Individual.sex is redacted in the public release, so the present pole
+          fires only where the value is abnormal for BOTH sexes and the absent pole only where it is normal
+          for both; the band between asserts nothing. Tighten per sex when sex ships (WHO: >=102 cm men,
+          >=88 cm women)'
+        evidence_code: ECO:0007307
+        loinc_id: 8280-0
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Abdominal obesity, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 88
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012743
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Abdominal obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: below both cut-offs'
+        evidence_code: ECO:0007307
+        loinc_id: 8280-0
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Abdominal obesity, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 88
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012743
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Abdominal obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist circumference >= 88 cm for female participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 8280-0
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Abdominal obesity, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 88
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012743
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Abdominal obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist circumference >= 88 cm for female participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 8280-0
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Abdominal obesity, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 102
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012743
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Abdominal obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist circumference >= 102 cm for male participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 8280-0
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Abdominal obesity, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 102
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012743
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Abdominal obesity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist circumference >= 102 cm for male participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        loinc_id: 8280-0
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+  MeasurementWhrVsorres:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.whr_vsorres
+    title: Waist to hip ratio
+    rules:
+    - title: Increased waist to hip ratio, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.9
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031819
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased waist to hip ratio
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'sex-blind gate: Individual.sex is redacted in the public release, so the present pole
+          fires only where the value is abnormal for BOTH sexes and the absent pole only where it is normal
+          for both; the band between asserts nothing. Tighten per sex when sex ships (WHO: >=0.90 men,
+          >=0.85 women). NOTE OMOP concept 44809433 on this row resolves in Athena to ''Waist to HEIGHT
+          ratio''; the item label and REDCap formula are waist/hip'
+        evidence_code: ECO:0007307
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Increased waist to hip ratio, absent
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 0.85
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031819
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased waist to hip ratio
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: 'absent pole: below both cut-offs'
+        evidence_code: ECO:0007307
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Increased waist to hip ratio, present, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.85
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031819
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased waist to hip ratio
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist-hip ratio >= 0.85 for female participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Increased waist to hip ratio, absent, sex == "FEMALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 0.85
+          sex:
+            equals_string: FEMALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031819
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased waist to hip ratio
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist-hip ratio >= 0.85 for female participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Increased waist to hip ratio, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.9
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031819
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased waist to hip ratio
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist-hip ratio >= 0.9 for male participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+    - title: Increased waist to hip ratio, absent, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 0.9
+          sex:
+            equals_string: MALE
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031819
+          status:
+            equals_string: excluded
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Increased waist to hip ratio
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: WHO 2008 waist-hip ratio >= 0.9 for male participants; per-sex gate via when_subject
+        evidence_code: ECO:0007307
+        threshold_source: WHO 2008 waist circumference (>=102 cm men, >=88 cm women) and waist-hip ratio
+          (>=0.90 men, >=0.85 women)
+  MeasurementViaodpscore:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.viaodpscore
+    title: Photopic logMAR score, right eye
+    rules:
+    - title: Reduced visual acuity, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 0.3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0007663
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced visual acuity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'photopic BCVA logMAR worse than 0.30 (6/12, 20/40) in this eye. PER-EYE item: presence
+          in either eye is presence; no absent pole, since a normal eye cannot rule out the fellow eye.
+          Mesopic (low-luminance) scores are not mapped -- HPO has no term for a low-luminance deficit'
+        evidence_code: ECO:0007307
+        threshold_source: 'WHO ICD-11 vision impairment categories: mild = presenting acuity worse than
+          6/12 (logMAR > 0.30)'
+  MeasurementViaospscore:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.viaospscore
+    title: Photopic logMAR score, left eye
+    rules:
+    - title: Reduced visual acuity, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - maximum_value: 0.3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0007663
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced visual acuity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: 'photopic BCVA logMAR worse than 0.30 (6/12, 20/40) in this eye. PER-EYE item: presence
+          in either eye is presence; no absent pole, since a normal eye cannot rule out the fellow eye.
+          Mesopic (low-luminance) scores are not mapped -- HPO has no term for a low-luminance deficit'
+        evidence_code: ECO:0007307
+        threshold_source: 'WHO ICD-11 vision impairment categories: mild = presenting acuity worse than
+          6/12 (logMAR > 0.30)'
+  MeasurementPlcsodlog:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.plcsodlog
+    title: Photopic log contrast sensitivity, right eye
+    rules:
+    - title: Reduced contrast sensitivity, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 1.52
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032036
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced contrast sensitivity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: photopic MARS log CS below 1.52 in this eye; per-eye, so no absent pole. HPO's mild/moderate/severe
+          terms are defined as log-unit LOSS against an individual norm and are not derivable from one
+          reading; mesopic CS is not mapped
+        evidence_code: ECO:0007307
+        threshold_source: 'MARS Letter Contrast Sensitivity Test (Perceptrix) norms: log CS below 1.52
+          is below normal at any adult age'
+  MeasurementPlcsoslog:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.plcsoslog
+    title: Photopic log contrast sensitivity, left eye
+    rules:
+    - title: Reduced contrast sensitivity, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 1.52
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0032036
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Reduced contrast sensitivity
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: photopic MARS log CS below 1.52 in this eye; per-eye, so no absent pole. HPO's mild/moderate/severe
+          terms are defined as log-unit LOSS against an individual norm and are not derivable from one
+          reading; mesopic CS is not mapped
+        evidence_code: ECO:0007307
+        threshold_source: 'MARS Letter Contrast Sensitivity Test (Perceptrix) norms: log CS below 1.52
+          is below normal at any adult age'
+  MeasurementViaodsph:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.viaodsph
+    title: Autorefraction sphere, right eye
+    rules:
+    - title: Myopia, present
+      preconditions:
+        slot_conditions:
+          value:
+            maximum_value: -0.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000545
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Myopia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'autorefraction SPHERE, not spherical equivalent: the cylinder sign convention of the
+          Topcon KR-800 export is unverified, so cyl/2 is not folded in; per-eye, no absent pole'
+        evidence_code: ECO:0007307
+        threshold_source: 'epidemiological refractive-error cut-offs: myopia <= -0.50 D, hyperopia >=
+          +0.50 D, astigmatism >= 0.75 D'
+    - title: Hypermetropia, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000540
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypermetropia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: sphere only, as above; per-eye, no absent pole
+        evidence_code: ECO:0007307
+        threshold_source: 'epidemiological refractive-error cut-offs: myopia <= -0.50 D, hyperopia >=
+          +0.50 D, astigmatism >= 0.75 D'
+  MeasurementViaossph:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.viaossph
+    title: Autorefraction sphere, left eye
+    rules:
+    - title: Myopia, present
+      preconditions:
+        slot_conditions:
+          value:
+            maximum_value: -0.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000545
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Myopia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'autorefraction SPHERE, not spherical equivalent: the cylinder sign convention of the
+          Topcon KR-800 export is unverified, so cyl/2 is not folded in; per-eye, no absent pole'
+        evidence_code: ECO:0007307
+        threshold_source: 'epidemiological refractive-error cut-offs: myopia <= -0.50 D, hyperopia >=
+          +0.50 D, astigmatism >= 0.75 D'
+    - title: Hypermetropia, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000540
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Hypermetropia
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: sphere only, as above; per-eye, no absent pole
+        evidence_code: ECO:0007307
+        threshold_source: 'epidemiological refractive-error cut-offs: myopia <= -0.50 D, hyperopia >=
+          +0.50 D, astigmatism >= 0.75 D'
+  MeasurementViaodcyl:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.viaodcyl
+    title: Autorefraction cylinder, right eye
+    rules:
+    - title: Astigmatism, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.75
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000483
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Astigmatism
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: cylinder magnitude >= 0.75 D. POSITIVE-cylinder convention observed in the public sample;
+          a negative-cylinder release would not fire this and needs a <=-0.75 row
+        evidence_code: ECO:0007307
+        threshold_source: 'epidemiological refractive-error cut-offs: myopia <= -0.50 D, hyperopia >=
+          +0.50 D, astigmatism >= 0.75 D'
+  MeasurementViaoscyl:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.viaoscyl
+    title: Autorefraction cylinder, left eye
+    rules:
+    - title: Astigmatism, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 0.75
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000483
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Astigmatism
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: cylinder magnitude >= 0.75 D. POSITIVE-cylinder convention observed in the public sample;
+          a negative-cylinder release would not fire this and needs a <=-0.75 row
+        evidence_code: ECO:0007307
+        threshold_source: 'epidemiological refractive-error cut-offs: myopia <= -0.50 D, hyperopia >=
+          +0.50 D, astigmatism >= 0.75 D'
+  MeasurementMssrffl:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.mssrffl
+    title: Right foot, monofilament sites felt (of 10)
+    rules:
+    - title: Distal sensory impairment, present
+      preconditions:
+        slot_conditions:
+          value:
+            maximum_value: 7
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002936
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Distal sensory impairment
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: Semmes-Weinstein 10 g monofilament, sites felt of 10 on this foot; 0-7 is reduced or
+          absent protective sensation. Per-foot, so no absent pole
+        evidence_code: ECO:0007307
+        threshold_source: 'docs.aireadi.org monofilament-testing: 8 of 10 sites felt is normal, 1-7 reduced,
+          0 absent'
+  MeasurementMsslffl:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.msslffl
+    title: Left foot, monofilament sites felt (of 10)
+    rules:
+    - title: Distal sensory impairment, present
+      preconditions:
+        slot_conditions:
+          value:
+            maximum_value: 7
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002936
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Distal sensory impairment
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: Semmes-Weinstein 10 g monofilament, sites felt of 10 on this foot; 0-7 is reduced or
+          absent protective sensation. Per-foot, so no absent pole
+        evidence_code: ECO:0007307
+        threshold_source: 'docs.aireadi.org monofilament-testing: 8 of 10 sites felt is normal, 1-7 reduced,
+          0 absent'
+  MeasurementMocaTotalScore:
+    is_a: GatedItem
+    class_uri: b2ai:measurement.moca_total_score
+    title: Total score [MoCA]
+    rules:
+    - title: Cognitive impairment, present
+      preconditions:
+        slot_conditions:
+          value:
+            none_of:
+            - minimum_value: 26
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0100543
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:relatedMatch
+        object_label: Cognitive impairment
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: MoCA total below the instrument's published cut-off of 26 (Nasreddine et al. 2005); present
+          pole only - a normal score at one visit does not rule impairment out, and the cut-off has known
+          education and age effects (docs.aireadi.org states <24 impaired, >=26 normal, plus one point
+          for <=12 years of education, which this gate does not apply). Gated 2026-10-22 once measurement/moca.yaml
+          shipped the total. PENDING CLINICAL REVIEW.
+        evidence_code: ECO:0007307
+        loinc_id: 72172-0
+        threshold_source: Nasreddine et al., J Am Geriatr Soc 2005 (MoCA validation; normal >= 26)
