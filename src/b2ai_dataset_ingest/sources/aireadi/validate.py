@@ -622,7 +622,7 @@ def _check_declared_units(
     for row in rows:
         key = item_key(row.get("measurement_source_value", ""))
         source_unit = (row.get("unit_source_value") or "").strip()
-        if key in measures and source_unit and source_unit != "N/A":
+        if key in measures and not is_blank(source_unit):
             seen.setdefault(key, set()).add(source_unit)
     for key, units in sorted(seen.items()):
         declared = ((measures[key] or {}).get("unit") or {}).get("label")
