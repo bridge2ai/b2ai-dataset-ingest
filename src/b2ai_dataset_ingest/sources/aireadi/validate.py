@@ -104,8 +104,31 @@ def count(n: int) -> str:
     return f"<{SMALL_CELL}" if 0 < n < SMALL_CELL else str(n)
 
 
+#: The datatype directories a full AI-READI release ships (docs.aireadi.org v3, "The AI-READI
+#: dataset contains 8 datatypes" plus clinical_data). Each holds one ``manifest.tsv`` and then
+#: ``<modality>/<device>/<participant_id>/`` trees. Named here so the preflight can say which
+#: of them a delivery is missing -- the flagship manifest received 2026-10-22 had no
+#: retinal_oct, retinal_octa or retinal_flio, and nothing else would have noticed.
+MODALITY_DATATYPES = (
+    "cardiac_ecg",
+    "environment",
+    "retinal_flio",
+    "retinal_oct",
+    "retinal_octa",
+    "retinal_photography",
+    "wearable_activity_monitor",
+    "wearable_blood_glucose",
+)
+
+#: The Data Quality Dashboard results file AI-READI ships alongside the OMOP tables.
+DQD_FILE = "dqd_omop.json"
+
+
 def validate_aireadi(
-    root: Path, config_dir: Path, strict_coverage: bool = False
+    root: Path,
+    config_dir: Path,
+    strict_coverage: bool = False,
+    modalities: bool = False,
 ) -> ValidationReport:
     """Validate the on-disk AI-READI layout at ``root`` against configs in ``config_dir``.
 
@@ -129,8 +152,189 @@ def validate_aireadi(
         root, config_dir, report, "conditions.yaml", "conditions", strict_coverage
     )
     _validate_measurements(root, config_dir, report, strict_coverage)
+    _validate_dqd(root, report)
+    if modalities:
+        _validate_modalities(root, config_dir, report, strict_coverage)
     _check_root_looks_like_a_release(root, report)
     return report
+
+
+# -- the release's own quality report -------------------------------------------------
+def _validate_dqd(root: Path, report: ValidationReport) -> None:
+    """Surface the OHDSI Data Quality Dashboard results the release ships.
+
+    ``clinical_data/dqd_omop.json`` is the output of ``DataQualityDashboard::executeDqChecks``:
+    ``Overview`` (pass/fail totals), ``CheckResults`` (one row per check, each with
+    ``checkName``, ``checkLevel``, ``cdmTableName`` and a ``failed`` flag) and ``Metadata``.
+    A failed check is a known source-side issue -- a column the ETL left empty, a value
+    outside its plausible range -- and knowing it up front stops us chasing it later as an
+    ingest bug. Only check names, table names and counts are reported: the file carries no
+    row-level data, and nothing here reads any.
+
+    Absent is fine (the mini release and every fixture lack it); malformed is a warning, not
+    an error, because the file is advisory and not something this pipeline consumes.
+    """
+    path = root / "clinical_data" / DQD_FILE
+    if not path.exists():
+        return
+    try:
+        import json
+
+        with open(path, encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except (OSError, ValueError) as exc:
+        report.warning("dqd", f"{DQD_FILE} is not readable JSON ({type(exc).__name__})")
+        return
+    if not isinstance(payload, dict):
+        report.warning("dqd", f"{DQD_FILE} is not a DQD results object")
+        return
+    report.tables_checked.append("dqd")
+    results = payload.get("CheckResults")
+    if not isinstance(results, list):
+        report.warning("dqd", f"{DQD_FILE} has no CheckResults list")
+        return
+    overview = payload.get("Overview") if isinstance(payload.get("Overview"), dict) else {}
+    total = _as_count(overview.get("countTotal")) or len(results)
+    failed_rows = [r for r in results if isinstance(r, dict) and _as_count(r.get("failed"))]
+    failed = _as_count(overview.get("countFailed"))
+    failed = len(failed_rows) if failed is None else failed
+    version = ""
+    meta = payload.get("Metadata")
+    if isinstance(meta, list) and meta and isinstance(meta[0], dict):
+        version = str(meta[0].get("dqdVersion") or "")
+    report.info(
+        "dqd",
+        f"{total} check(s), {failed} failed"
+        + (f" (DataQualityDashboard {version})" if version else ""),
+    )
+    if not failed_rows:
+        return
+    by_table: Counter = Counter(
+        str(r.get("cdmTableName") or "?").lower() for r in failed_rows
+    )
+    report.warning(
+        "dqd",
+        "failed checks by table: "
+        + ", ".join(f"{table}={n}" for table, n in by_table.most_common()),
+    )
+    # Name the checks, not their numbers: a check name is DQD vocabulary, the violated-row
+    # count on a sparse table can be a small cell.
+    names = sorted(
+        {
+            f"{r.get('cdmTableName') or '?'}.{r.get('cdmFieldName') or '-'}:"
+            f"{r.get('checkName') or '?'}"
+            for r in failed_rows
+        }
+    )
+    report.info(
+        "dqd",
+        "failed check(s): " + ", ".join(names[:20]) + (" ..." if len(names) > 20 else ""),
+    )
+
+
+def _as_count(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+# -- the non-clinical datatypes ---------------------------------------------------------
+def _validate_modalities(
+    root: Path, config_dir: Path, report: ValidationReport, strict_coverage: bool
+) -> None:
+    """Inventory the modality datatypes from their manifests, never by walking the tree.
+
+    Each datatype directory ships ``manifest.tsv`` with one row per file (or per participant
+    for the single-file modalities), a ``participant_id`` column and one or more ``*filepath``
+    columns. Everything reported is a datatype, a device directory name, or a count. A
+    datatype that is documented for a full release and absent here is a completeness
+    finding: a warning by default, an error under ``strict_coverage`` -- same policy as an
+    absent OMOP table.
+
+    The participants.tsv modality flags are the cross-check: a participant flagged
+    ``cardiac_ecg = TRUE`` should have ECG rows in that manifest. Both are counted, never
+    joined on an id in the output.
+    """
+    flags = _modality_flags(root, config_dir)
+    present: list[str] = []
+    for datatype in MODALITY_DATATYPES:
+        directory = root / datatype
+        manifest = directory / "manifest.tsv"
+        if not directory.is_dir():
+            note = report.error if strict_coverage else report.warning
+            note(datatype, "datatype directory not present in this release")
+            continue
+        present.append(datatype)
+        header, rows = _read(manifest, "\t")
+        if header is None:
+            report.error(datatype, "directory present but has no manifest.tsv")
+            continue
+        report.tables_checked.append(datatype)
+        id_column = _participant_column(header)
+        if id_column is None:
+            report.error(datatype, "manifest.tsv has no participant_id column")
+            continue
+        path_columns = [c for c in header if c.lower().endswith("filepath")]
+        participants = {r.get(id_column, "").strip() for r in rows} - {""}
+        files = sum(1 for r in rows for c in path_columns if (r.get(c) or "").strip())
+        devices = Counter()
+        for r in rows:
+            for c in path_columns:
+                device = _device_of(r.get(c) or "", datatype)
+                if device:
+                    devices[device] += 1
+        summary = (
+            f"{count(len(rows))} manifest row(s), {count(len(participants))} participant(s)"
+            + (f", {count(files)} file path(s)" if path_columns else ", no *filepath column")
+        )
+        if devices:
+            summary += "; devices: " + ", ".join(
+                f"{d}={count(n)}" for d, n in sorted(devices.items())
+            )
+        report.info(datatype, summary)
+        flagged = flags.get(datatype)
+        if flagged is not None and flagged != len(participants):
+            report.warning(
+                datatype,
+                f"participants.tsv flags {count(flagged)} participant(s) for this modality "
+                f"but the manifest lists {count(len(participants))}",
+            )
+    if present:
+        report.info("-", f"modalities present: {', '.join(present)}")
+
+
+def _modality_flags(root: Path, config_dir: Path) -> dict[str, int]:
+    """``datatype -> number of participants flagged TRUE`` from participants.tsv."""
+    mapping = _load(config_dir / "participants.yaml") or {}
+    path = root / mapping.get("file", "participants.tsv")
+    header, rows = _read(path, mapping.get("delimiter", "\t"))
+    if header is None:
+        return {}
+    flags: dict[str, int] = {}
+    for datatype in MODALITY_DATATYPES:
+        if datatype in header:
+            flags[datatype] = sum(
+                1 for r in rows if (r.get(datatype) or "").strip().lower() in ("true", "1")
+            )
+    return flags
+
+
+def _participant_column(header: list[str]) -> str | None:
+    for candidate in ("participant_id", "person_id", "studyid"):
+        if candidate in header:
+            return candidate
+    return None
+
+
+def _device_of(path: str, datatype: str) -> str:
+    """The ``<device>`` segment of ``<datatype>/<modality>/<device>/<pid>/<file>``."""
+    parts = [p for p in path.replace("\\", "/").split("/") if p]
+    if datatype in parts:
+        index = parts.index(datatype)
+        if len(parts) > index + 2:
+            return parts[index + 2]
+    return ""
 
 
 def _check_root_looks_like_a_release(root: Path, report: ValidationReport) -> None:

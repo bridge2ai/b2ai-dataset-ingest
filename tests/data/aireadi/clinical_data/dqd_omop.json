@@ -1,0 +1,58 @@
+{
+  "Metadata": [
+    {
+      "cdmSourceName": "b2ai-dataset-ingest hand-authored fixture",
+      "cdmSourceAbbreviation": "fixture",
+      "cdmVersion": "5.4",
+      "dqdVersion": "2.6.0"
+    }
+  ],
+  "Overview": {
+    "countTotal": 4,
+    "countPassed": 2,
+    "countFailed": 2,
+    "countErrorFailed": 0,
+    "countOverallFailed": 2,
+    "percentPassed": 50.0
+  },
+  "CheckResults": [
+    {
+      "checkName": "measurePersonCompleteness",
+      "checkLevel": "TABLE",
+      "cdmTableName": "MEASUREMENT",
+      "failed": 0,
+      "passed": 1,
+      "numViolatedRows": 0,
+      "pctViolatedRows": 0.0
+    },
+    {
+      "checkName": "isRequired",
+      "checkLevel": "FIELD",
+      "cdmTableName": "PERSON",
+      "cdmFieldName": "GENDER_CONCEPT_ID",
+      "failed": 1,
+      "passed": 0,
+      "numViolatedRows": 3,
+      "pctViolatedRows": 1.0,
+      "notesValue": "Sex is redacted in the published release"
+    },
+    {
+      "checkName": "plausibleValueLow",
+      "checkLevel": "FIELD",
+      "cdmTableName": "MEASUREMENT",
+      "cdmFieldName": "VALUE_AS_NUMBER",
+      "failed": 1,
+      "passed": 0,
+      "numViolatedRows": 1,
+      "pctViolatedRows": 0.05
+    },
+    {
+      "checkName": "cdmTable",
+      "checkLevel": "TABLE",
+      "cdmTableName": "DRUG_EXPOSURE",
+      "failed": 0,
+      "passed": 1,
+      "notApplicable": 1
+    }
+  ]
+}
