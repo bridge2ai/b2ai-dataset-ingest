@@ -1,0 +1,8 @@
+studyid,redcap_repeat_instrument,redcap_repeat_instance,cmname,cmroute,cmrouteot,cmdos,cmdosu,cmdosfrq,rxnorm_code,rxnorm_term
+900001,current_medications,1,metformin,6,,500,8,BID,6809,metformin
+900001,current_medications,2,lisinopril,6,,10,8,QD,29046,lisinopril
+900001,current_medications,3,an unmapped free-text name,6,,1,15,QD,,
+900002,current_medications,1,insulin glargine,9,,20,5,QD,274783,insulin glargine
+900002,current_medications,2,atorvastatin,6,,one half,8,QD,83367,atorvastatin
+900002,current_medications,3,eye drops,888,invented route,1,18,888,,
+900003,current_medications,1,metformin,6,,1000,8,BID,6809,metformin

@@ -60,6 +60,8 @@ class PhenopacketEmitter(Emitter):
             packet.measurements.append(_measurement(measurement))
         for feature in participant.phenotypic_features:
             packet.phenotypic_features.append(_phenotypic_feature(feature))
+        for treatment in participant.treatments:
+            packet.medical_actions.append(_medical_action(treatment))
         for uri in participant.audio_references:
             packet.files.append(pp.File(uri=uri))
 
@@ -116,6 +118,8 @@ def _individual(individual: Individual) -> pp.Individual:
         subject.sex = pp.Sex.Value(sex)
     else:
         logger.warning("unknown sex %r; using UNKNOWN_SEX", individual.sex)
+    if individual.gender is not None:
+        subject.gender.CopyFrom(_ontology_class(individual.gender))
     if individual.age_iso8601:
         subject.time_at_last_encounter.CopyFrom(
             pp.TimeElement(age=pp.Age(iso8601duration=individual.age_iso8601))
@@ -199,6 +203,29 @@ def _phenotypic_feature(observation) -> pp.PhenotypicFeature:
     for item in observation.evidence:
         feature.evidence.append(_evidence(item))
     return feature
+
+
+def _medical_action(treatment) -> pp.MedicalAction:
+    """A reported medication as ``MedicalAction.treatment``.
+
+    One ``DoseInterval`` carries the dose and frequency when either is known; its
+    ``interval`` is left unset because a current-medications list records no start or end.
+    The time the list was taken has no slot of its own on ``Treatment``, so it goes in the
+    ``description`` of the action rather than being fabricated as an interval.
+    """
+    action = pp.MedicalAction()
+    action.treatment.agent.CopyFrom(_ontology_class(treatment.agent))
+    if treatment.route is not None:
+        action.treatment.route_of_administration.CopyFrom(_ontology_class(treatment.route))
+    if treatment.dose is not None or treatment.frequency is not None:
+        interval = action.treatment.dose_intervals.add()
+        if treatment.dose is not None:
+            interval.quantity.value = treatment.dose.value
+            if treatment.dose.unit is not None:
+                interval.quantity.unit.CopyFrom(_ontology_class(treatment.dose.unit))
+        if treatment.frequency is not None:
+            interval.schedule_frequency.CopyFrom(_ontology_class(treatment.frequency))
+    return action
 
 
 def _evidence(evidence) -> pp.Evidence:

@@ -69,8 +69,14 @@ from b2ai_dataset_ingest.model import (
     Quantity,
     ReferenceRange,
     TimePoint,
+    TreatmentObservation,
 )
 from b2ai_dataset_ingest.reporting import IngestReport
+from b2ai_dataset_ingest.sources.aireadi.supplements import (
+    read_demographics,
+    read_medications,
+    resolve_supplement,
+)
 from b2ai_dataset_ingest.sources.base import Source
 
 logger = logging.getLogger(__name__)
@@ -88,7 +94,26 @@ class _Accumulator:
         self.diseases: list[DiseaseObservation] = []
         self.measurements: list[MeasurementObservation] = []
         self.phenotypic_features: list[PhenotypicFeatureObservation] = []
+        self.treatments: list[TreatmentObservation] = []
         self._disease_ids: set[str] = set()
+
+    def subject(self, age_iso8601: str | None = None) -> dict[str, str]:
+        """The stratification fields a ``when_subject`` gate may read, as strings.
+
+        ``sex`` is the phenopacket enum spelling; ``age`` is whole years -- at the
+        observation when the caller knows it, else the participant's enrolment age. A field
+        with no value is simply absent, which is what makes a stratified gate not fire.
+        """
+        fields: dict[str, str] = {}
+        individual = self.individual
+        if individual is not None and individual.sex:
+            fields["sex"] = individual.sex
+        years = _years_of(age_iso8601) or (
+            _years_of(individual.age_iso8601) if individual is not None else None
+        )
+        if years is not None:
+            fields["age"] = str(years)
+        return fields
 
     def add_disease(self, disease: DiseaseObservation) -> None:
         if disease.term.id not in self._disease_ids:
@@ -100,11 +125,18 @@ class AireadiSource(Source):
     dataset_id = "bridge2ai-aireadi"
 
     def __init__(
-        self, root: Path, config_dir: Path, mappings: Iterable[Path] | None = None
+        self,
+        root: Path,
+        config_dir: Path,
+        mappings: Iterable[Path] | None = None,
+        supplements_dir: Path | None = None,
     ) -> None:
         super().__init__(root, config_dir)
         #: Aggregate, PHI-safe counts for the most recent :meth:`read`. The CLI prints it.
         self.report = IngestReport()
+        #: Where the protected supplements (demographics, medications) live when staged
+        #: outside the release tree; None -> the ``file`` globs in their configs, under root.
+        self.supplements_dir = Path(supplements_dir) if supplements_dir else None
         self._dataset_cfg: dict[str, Any] | None = None
         #: SSSOM files carrying value-gated rules; None -> the shipped aireadi sets.
         self._mappings = list(mappings) if mappings is not None else None
@@ -143,6 +175,9 @@ class AireadiSource(Source):
         visits = self._read_visits()
         anchors = self._read_participants(accumulator)
         self._read_person(accumulator)
+        # Supplements before the gated tables: a sex-stratified reference-range gate needs
+        # Individual.sex to be known by the time a measurement row is evaluated.
+        self._read_supplements(accumulator, anchors)
         self._read_conditions(accumulator, visits, anchors)
         self._read_measurements(accumulator, visits, anchors)
         self._read_observations(accumulator, visits, anchors)
@@ -157,9 +192,30 @@ class AireadiSource(Source):
                 diseases=acc.diseases,
                 measurements=acc.measurements,
                 phenotypic_features=acc.phenotypic_features,
+                treatments=acc.treatments,
                 source_dataset=self.dataset_id,
                 cohort=acc.cohort,
             )
+
+    # -- the protected supplements ---------------------------------------------------
+    def _read_supplements(self, accumulator: Any, anchors: dict[str, AgeAnchor]) -> None:
+        """Demographics -> Individual.sex/gender; medications -> TreatmentObservation.
+
+        Both optional. A config with no matching file is reported as a missing table, same
+        as an absent OMOP table, so a run that was expected to carry sex and did not says so.
+        """
+        for name, read in (
+            ("demographics", lambda p, m: read_demographics(p, m, accumulator, self.report)),
+            ("medications", lambda p, m: read_medications(p, m, accumulator, self.report, anchors)),
+        ):
+            mapping = self._config(f"supplements/{name}.yaml")
+            if mapping is None:
+                continue
+            path = resolve_supplement(self.root, mapping, self.supplements_dir)
+            if path is None:
+                self.report.tables_missing.append(mapping.get("table", name))
+                continue
+            read(path, mapping)
 
     # -- time ----------------------------------------------------------------------
     def _read_visits(self) -> dict[str, str]:
@@ -409,10 +465,17 @@ class AireadiSource(Source):
         # over a plain {item: value} dict, so the OMOP path reuses it with no changes.
         resolve = _ordinal_of
         for person_id, row_answers in answers.items():
+            acc = accumulator(person_id)
+            moment = when.get(person_id)
             features = derive_features(
-                row_answers, table_rules, resolve, when.get(person_id), self.report
+                row_answers,
+                table_rules,
+                resolve,
+                moment,
+                self.report,
+                subject=acc.subject(moment.age_iso8601 if moment else None),
             )
-            accumulator(person_id).phenotypic_features.extend(features)
+            acc.phenotypic_features.extend(features)
 
     # -- measurement -> Measurement ---------------------------------------------------
     def _read_measurements(
@@ -471,9 +534,16 @@ class AireadiSource(Source):
             # Gating only what was fit to emit as a Measurement is the whole screen: a
             # sentinel, a censored bound or an unmapped unit never reaches a cut-point.
             # `_raw_number` (not `_ordinal_of`) is load-bearing -- see its docstring.
+            # The subject carries sex and the row's own age, so a sex- or age-stratified
+            # interval picks the right stratum per observation.
+            when = observation.time
             derived.setdefault(person_id, []).extend(
                 derive_features(
-                    {cell.item: cell.value}, {cell.item: rules}, _raw_number, observation.time
+                    {cell.item: cell.value},
+                    {cell.item: rules},
+                    _raw_number,
+                    when,
+                    subject=accumulator(person_id).subject(when.age_iso8601 if when else None),
                 )
             )
         for person_id, features in derived.items():
@@ -715,6 +785,14 @@ def _moment(feature: PhenotypicFeatureObservation) -> tuple[str | None, ...] | N
     if when is None:
         return None
     return (when.session_id, when.timestamp, when.age_iso8601)
+
+
+def _years_of(age_iso8601: str | None) -> int | None:
+    """``"P63Y"`` -> ``63``; None for anything else (a month-precision age has no years)."""
+    raw = (age_iso8601 or "").strip().upper()
+    if raw.startswith("P") and raw.endswith("Y") and raw[1:-1].isdigit():
+        return int(raw[1:-1])
+    return None
 
 
 def _ordinal_of(_item: str, raw: str) -> int | None:

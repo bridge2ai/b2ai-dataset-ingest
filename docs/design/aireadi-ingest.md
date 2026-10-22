@@ -132,6 +132,20 @@ published standard: a second OMOP dataset reuses the module and writes only its 
   every row. `person.yaml` is written for a release that carries demographics and recodes `0`
   to nothing; the redaction is reported per column, so a run of all-`UNKNOWN_SEX` subjects
   cannot read as success.
+- **The protected supplements (2026-10-22).** Under the controlled tier, sex and gender
+  identity arrive in a REDCap demographics export and medications in a `current_medications`
+  export, both outside the OMOP tree. `config/aireadi/supplements/` maps `scrsex` →
+  `Individual.sex`, `genderid` → `Individual.gender` (LOINC 76691-5 answer codes, the
+  vocabulary the phenopacket-schema docs use), and each coded medication row →
+  `MedicalAction.treatment` with the source's RxNorm CUI as agent, NCIT route and frequency,
+  UCUM dose unit. Both are optional inputs resolved by glob under the root or
+  `--supplements-dir`. **Race, ethnicity, ancestry and every free-text column are not read**:
+  there is no phenopacket slot, AI-READI withheld them from the public tier on purpose, and
+  free text is Data no model may consult (§3.C). A medication row with no RxNorm code is
+  counted and dropped rather than resolved from `cmname`. Sex being known is what lets the
+  measurement set carry **sex- and age-stratified gates** via the `when_subject` SSSOM
+  column (see `docs/mapping-conventions.md`): the sex-blind rows stay as the fallback for an
+  unknown sex, and the stratified rows fire only for a matching, known subject.
 
 ### Value-gated HPO derivation
 

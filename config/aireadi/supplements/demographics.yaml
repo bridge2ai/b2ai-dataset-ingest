@@ -1,0 +1,89 @@
+# Mapping: AI-READI protected demographics supplement -> Individual (IR)
+#
+# A REDCap export outside the OMOP tree, delivered under the controlled tier of the Data
+# License Agreement. The public release redacts sex, gender, race and ethnicity from
+# person.csv ("to prevent stigmatizing findings", docs.aireadi.org); this file is what
+# lights them up when the supplement is present. It is OPTIONAL: without the file the
+# ingest emits exactly what it did before.
+#
+# SOURCE. Column names and answer codes come from the protected data dictionary
+# ("AIREADi Fairhub DataDictionary Protected Dataset", sheet "Protected - demographics"),
+# which is documentation under the DUA's own definition. No row of the supplement was read
+# to write this file.
+#
+# WHAT IS MAPPED
+#   scrsex    "What sex were you assigned at birth?"  -> Individual.sex (phenopacket enum)
+#   genderid  "What gender do you identify as?"       -> Individual.gender (OntologyClass)
+#
+# Gender identity uses the LOINC answer list of 76691-5 "Gender identity" (LL3322-6), which
+# is the vocabulary the phenopacket-schema documentation itself uses for Individual.gender.
+# Codes verified by exact lookup against the NLM Clinical Table LOINC service, 2026-10-22.
+# REDCap "Non-binary" maps to LA22882-7 "Identifies as non-conforming", the closest answer
+# in that list; "Other" (888) to LA46-8; "Prefer not to say" (777) to nothing.
+#
+# WHAT IS NOT MAPPED, AND WHY -- a decision, written down so it is reviewable:
+#   race___*, race2, ethnic___*, ancestry, racetrib
+#       Phenopacket v2 Individual has no slot for race or ethnicity, and AI-READI withheld
+#       them from the public tier on purpose. Cohort composition belongs in a cohort-level
+#       summary, not in per-person packets. config/shared/value_sets.yaml records the same.
+#   raceot, ethnicot, genderidot, mhcat_dmtaot, mhoccur_cnsot, mhoccur_cnrot
+#       Free text. Data under §3.C that no model may read; nothing here consults them.
+#   rp_childpot   Pregnancy is an exclusion criterion, so every enrolled participant is 0.
+#   cl_maristat, pxhic6, pxhic9, dvenvlocn, exportzip
+#       Marital status, insurance, sensor location, zip: not phenotype; zip is an identifier.
+#
+# A declined answer (777 / 888 on a coded column) recodes to nothing and is counted per
+# column on the report, so a supplement that is mostly "prefer not to say" is visible.
+table: demographics
+file: "supplements/*emographics*.csv"      # glob relative to the release root; see --supplements-dir
+id_column: studyid
+produces: Individual
+columns:
+  scrsex:
+    target: Individual.sex
+    value_map:
+      F: FEMALE
+      M: MALE
+      I: OTHER_SEX
+  genderid:
+    target: Individual.gender
+    value_terms:
+      "1": { id: "LOINC:LA22878-5", label: "Identifies as male" }
+      "2": { id: "LOINC:LA22879-3", label: "Identifies as female" }
+      "3": { id: "LOINC:LA22882-7", label: "Identifies as non-conforming" }
+      "888": { id: "LOINC:LA46-8", label: "Other" }
+dropped_columns:
+  rp_childpot: "Pregnancy screen; an exclusion criterion, so always 0 for an enrolled participant."
+  race___c17459: &race "Race / ethnicity: no phenopacket slot, and withheld from the public tier by AI-READI. Not emitted (see header)."
+  race___c41260: *race
+  race___c16352: *race
+  race___c77820: *race
+  race___c41219: *race
+  race___c77813: *race
+  race___c41261: *race
+  race___888: *race
+  race___777: *race
+  race2: *race
+  racetrib: *race
+  ethnic___c41222: *race
+  ethnic___c67113: *race
+  ethnic___c67112: *race
+  ethnic___c107608: *race
+  ethnic___c67117: *race
+  ethnic___c67118: *race
+  ethnic___c126532: *race
+  ethnic___c999: *race
+  ethnic___888: *race
+  ethnic___777: *race
+  ancestry: *race
+  raceot: &free_text "Free text. Data under DLA §3.C; never read."
+  ethnicot: *free_text
+  genderidot: *free_text
+  mhcat_dmtaot: *free_text
+  mhoccur_cnsot: *free_text
+  mhoccur_cnrot: *free_text
+  cl_maristat: "Marital status: not phenotype."
+  pxhic6: "Insurance coverage: not phenotype."
+  pxhic9: "Insurance type, free text: not phenotype, and never read."
+  dvenvlocn: "Environmental sensor location: provenance for the environment modality, not phenotype."
+  exportzip: "Zip code: a HIPAA identifier."
