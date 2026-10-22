@@ -372,10 +372,12 @@ only for a participant the condition matches.
   value for does not fire — a declined or redacted sex must never satisfy a female-only
   gate. That is also why the sex-blind row stays in the file: it is the fallback for an
   unknown sex, not a duplicate.
-- **Both may fire, and agree.** For a known sex the unconditioned sex-blind row and the
-  matching per-sex row are both evaluated. They cannot contradict, because the sex-blind
-  band is by construction the intersection of the per-sex bands; the reader keeps one
-  feature per term and time (`_reconcile`).
+- **A matching stratum is authoritative.** For one item, when at least one stratified row
+  matches the participant, only the stratified rows are evaluated; the unconditioned
+  sex-blind rows are the fallback for a subject no stratum covers, not a second opinion.
+  So a feature derived for a known sex always carries the per-sex row's provenance and
+  cut-point. (The sex-blind band is by construction the intersection of the per-sex bands,
+  so the two could not contradict anyway.)
 - **A stratum only qualifies a gate.** `when_subject` on a row with no `when_value` is an
   error (`unconditioned-subject`): a term-to-term mapping is not "about" one sex.
 - **Identity.** The stratum is part of a row's identity for the duplicate check, the gate is

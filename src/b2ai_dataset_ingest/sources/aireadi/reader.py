@@ -60,6 +60,7 @@ from b2ai_dataset_ingest.mapping.omop import (
 )
 from b2ai_dataset_ingest.model import (
     DiseaseObservation,
+    FileReference,
     Individual,
     MeasurementObservation,
     OntologyTerm,
@@ -72,6 +73,13 @@ from b2ai_dataset_ingest.model import (
     TreatmentObservation,
 )
 from b2ai_dataset_ingest.reporting import IngestReport
+from b2ai_dataset_ingest.sources.aireadi.modalities import (
+    FILE_MODES,
+    file_references,
+    load_modality_configs,
+    manifest_measurements,
+    series_summaries,
+)
 from b2ai_dataset_ingest.sources.aireadi.supplements import (
     read_demographics,
     read_medications,
@@ -95,6 +103,7 @@ class _Accumulator:
         self.measurements: list[MeasurementObservation] = []
         self.phenotypic_features: list[PhenotypicFeatureObservation] = []
         self.treatments: list[TreatmentObservation] = []
+        self.files: list[FileReference] = []
         self._disease_ids: set[str] = set()
 
     def subject(self, age_iso8601: str | None = None) -> dict[str, str]:
@@ -130,10 +139,19 @@ class AireadiSource(Source):
         config_dir: Path,
         mappings: Iterable[Path] | None = None,
         supplements_dir: Path | None = None,
+        files: str = "none",
+        device_summaries: bool = False,
     ) -> None:
         super().__init__(root, config_dir)
         #: Aggregate, PHI-safe counts for the most recent :meth:`read`. The CLI prints it.
         self.report = IngestReport()
+        if files not in FILE_MODES:
+            raise ValueError(f"files must be one of {FILE_MODES}, got {files!r}")
+        #: How the modality manifests are linked: none, one File per participant folder, or
+        #: one per file. Off by default so the clinical output stays byte-identical.
+        self.files_mode = files
+        #: Emit the ECG intervals and the CGM / wearable window summaries as Measurements.
+        self.device_summaries = device_summaries
         #: Where the protected supplements (demographics, medications) live when staged
         #: outside the release tree; None -> the ``file`` globs in their configs, under root.
         self.supplements_dir = Path(supplements_dir) if supplements_dir else None
@@ -181,6 +199,7 @@ class AireadiSource(Source):
         self._read_conditions(accumulator, visits, anchors)
         self._read_measurements(accumulator, visits, anchors)
         self._read_observations(accumulator, visits, anchors)
+        self._read_modalities(accumulator, anchors)
 
         self.report.participants = len(participants)
         for person_id in sorted(participants):
@@ -193,9 +212,71 @@ class AireadiSource(Source):
                 measurements=acc.measurements,
                 phenotypic_features=acc.phenotypic_features,
                 treatments=acc.treatments,
+                files=acc.files,
                 source_dataset=self.dataset_id,
                 cohort=acc.cohort,
             )
+
+    # -- the non-clinical datatypes ----------------------------------------------------
+    def _read_modalities(self, accumulator: Any, anchors: dict[str, AgeAnchor]) -> None:
+        """File links and device-derived Measurements from the modality manifests.
+
+        Each ``config/aireadi/modalities/*.yaml`` names one datatype directory. Links are
+        emitted per the ``files`` mode; with ``device_summaries`` the ECG manifest columns
+        and the CGM / wearable series statistics become Measurements, and any value-gated
+        rule indexed under the config's ``table`` derives features from them exactly as the
+        OMOP measurement path does (per observation, reconciled per participant).
+        """
+        if self.files_mode == "none" and not self.device_summaries:
+            return
+        for mapping in load_modality_configs(self.config_dir, load_mapping):
+            datatype = mapping.get("datatype")
+            if not datatype:
+                continue
+            if not (self.root / datatype).is_dir():
+                self.report.tables_missing.append(datatype)
+                continue
+            self.report.tables_read.append(datatype)
+            for person_id, references in file_references(
+                self.root, mapping, self.files_mode, self.report
+            ).items():
+                accumulator(person_id).files.extend(references)
+            if not self.device_summaries:
+                continue
+            table = mapping.get("table", datatype)
+            rules = self._conditional_rules().get(table, {})
+            derived: dict[str, list[PhenotypicFeatureObservation]] = {}
+            for person_id, observation, item in self._device_measurements(mapping, anchors):
+                acc = accumulator(person_id)
+                acc.measurements.append(observation)
+                self.report.measurements_emitted += 1
+                if item not in rules or observation.value_quantity is None:
+                    continue
+                when = observation.time
+                derived.setdefault(person_id, []).extend(
+                    derive_features(
+                        {item: str(observation.value_quantity.value)},
+                        {item: rules[item]},
+                        _raw_number,
+                        when,
+                        subject=acc.subject(when.age_iso8601 if when else None),
+                    )
+                )
+            for person_id, features in derived.items():
+                reconciled = _reconcile(features)
+                accumulator(person_id).phenotypic_features.extend(reconciled)
+                self.report.features_derived += len(reconciled)
+
+    def _device_measurements(
+        self, mapping: dict[str, Any], anchors: dict[str, AgeAnchor]
+    ) -> Iterator[tuple[str, MeasurementObservation, str]]:
+        if mapping.get("measures") and not mapping.get("series"):
+            yield from manifest_measurements(self.root, mapping, anchors, self.report)
+        if mapping.get("series"):
+            yield from series_summaries(self.root, mapping, anchors, self.report)
+        for extra in mapping.get("extra_series") or []:
+            scoped = {**mapping, "series": extra.get("series"), "measures": extra.get("measures")}
+            yield from series_summaries(self.root, scoped, anchors, self.report)
 
     # -- the protected supplements ---------------------------------------------------
     def _read_supplements(self, accumulator: Any, anchors: dict[str, AgeAnchor]) -> None:

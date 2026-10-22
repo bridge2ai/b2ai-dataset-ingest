@@ -1,0 +1,50 @@
+# curie_map:
+#   b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+#   HP: http://purl.obolibrary.org/obo/HP_
+#   ECO: http://purl.obolibrary.org/obo/ECO_
+#   skos: http://www.w3.org/2004/02/skos/core#
+#   semapv: https://w3id.org/semapv/vocab/
+#   github: https://github.com/
+#   obo: http://purl.obolibrary.org/obo/
+# mapping_set_id: https://github.com/sujaypatil96/b2ai-dataset-ingest/mappings/b2ai-aireadi-devices.sssom.tsv
+# mapping_set_version: '2026-10-22'
+# license: https://creativecommons.org/publicdomain/zero/1.0/
+# mapping_provider: https://github.com/sujaypatil96/b2ai-dataset-ingest
+# creator_id:
+#   - github:justaddcoffee
+# subject_source: aireadi/1.0.0
+# object_source: obo:hp
+# object_source_version: hp/releases/2026-02-16
+# mapping_tool: 'manual; every object_id verified against the pinned hp.json (obographs) by b2ai-ingest validate-mappings'
+# mapping_date: '2026-10-22'
+# comment: AI-READI device-derived measurements mapped to HPO. Subjects are b2ai:cardiac_ecg.<manifest column> (the Philips 12-lead device's own interval and rate measurements, one row per recording, config/aireadi/modalities/cardiac_ecg.yaml) and b2ai:wearable_blood_glucose.<statistic> (window summaries over the 10-day Dexcom G6 series, config/aireadi/modalities/wearable_blood_glucose.yaml). EVERY ROW IS A MEASURED-VALUE MAPPING (evidence_code ECO:0007307) with a skos:relatedMatch predicate and a reference-range gate, on the same terms as b2ai-aireadi-measurement.sssom.tsv. THRESHOLDS - ECG rate and PR per the AHA/ACCF/HRS 2009 recommendations for the standardization and interpretation of the electrocardiogram (sinus bradycardia < 60, sinus tachycardia > 100 bpm; first-degree AV block PR > 200 ms, normal 120-200); QTc per the same (prolonged > 450 ms men, > 460 ms women), stratified by sex via when_subject with a sex-blind fallback (present only where abnormal for both sexes, > 460; absent only where normal for both, <= 450). The device's QTc formula is Bazett per the Philips DXL algorithm. NOT MAPPED - QRS duration (bundle-branch block is a morphology diagnosis, not a duration cut-point), the axes, and the device's own interpretation strings, which AI-READI states are not physician-reviewed. CGM - the glucose management indicator gates Hyperglycemia at the international consensus target (GMI >= 7.0 %, Battelino et al. 2019); confidence 0.7 pending clinical review, present pole only, since a 10-day window at target does not rule out hyperglycemia at other times. Wearable (Garmin) summaries derive no feature.
+# extension_definitions:
+#   - slot_name: when_value
+#     property: b2ai:when_value
+#     type_hint: xsd:string
+#   - slot_name: when_subject
+#     property: b2ai:when_subject
+#     type_hint: xsd:string
+#   - slot_name: evidence_code
+#     property: b2ai:evidence_code
+#     type_hint: xsd:string
+#   - slot_name: loinc_id
+#     property: b2ai:loinc_id
+#     type_hint: xsd:string
+#   - slot_name: threshold_source
+#     property: b2ai:threshold_source
+#     type_hint: xsd:string
+subject_id	subject_label	predicate_id	predicate_modifier	object_id	object_label	mapping_justification	confidence	comment	when_value	when_subject	evidence_code	loinc_id	threshold_source
+b2ai:cardiac_ecg.Rate	Heart rate	skos:relatedMatch		HP:0001662	Bradycardia	semapv:ManualMappingCuration	0.85	ventricular rate from the 12-lead recording, supine; < 60 bpm	<60		ECO:0007307	8867-4	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.Rate	Heart rate	skos:relatedMatch		HP:0001649	Tachycardia	semapv:ManualMappingCuration	0.85	ventricular rate from the 12-lead recording, supine; > 100 bpm	>100		ECO:0007307	8867-4	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.Rate	Heart rate	skos:relatedMatch	Not	HP:0001662	Bradycardia	semapv:ManualMappingCuration	0.85	rate within 60-100 bpm at this recording	>=60 & <=100		ECO:0007307	8867-4	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.Rate	Heart rate	skos:relatedMatch	Not	HP:0001649	Tachycardia	semapv:ManualMappingCuration	0.85	rate within 60-100 bpm at this recording	>=60 & <=100		ECO:0007307	8867-4	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.PR	P-R Interval	skos:relatedMatch		HP:0012248	Prolonged PR interval	semapv:ManualMappingCuration	0.85	PR > 200 ms is first-degree AV block by definition; the interval term is used rather than the block term because the device measures the interval	>200		ECO:0007307	8625-6	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.PR	P-R Interval	skos:relatedMatch	Not	HP:0012248	Prolonged PR interval	semapv:ManualMappingCuration	0.85	PR within 120-200 ms at this recording	>=120 & <=200		ECO:0007307	8625-6	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.QTc	Q-T interval corrected	skos:relatedMatch		HP:0001657	Prolonged QT interval	semapv:ManualMappingCuration	0.85	sex-blind gate: prolonged > 450 ms men, > 460 ms women; fires only where abnormal for both sexes	>460		ECO:0007307	8636-3	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.QTc	Q-T interval corrected	skos:relatedMatch	Not	HP:0001657	Prolonged QT interval	semapv:ManualMappingCuration	0.85	sex-blind gate: absent only where normal for both sexes (<= 450 ms)	<=450		ECO:0007307	8636-3	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.QTc	Q-T interval corrected	skos:relatedMatch		HP:0001657	Prolonged QT interval	semapv:ManualMappingCuration	0.9	per-sex gate: prolonged > 450 ms in men	>450	sex == "MALE"	ECO:0007307	8636-3	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.QTc	Q-T interval corrected	skos:relatedMatch	Not	HP:0001657	Prolonged QT interval	semapv:ManualMappingCuration	0.9	per-sex gate: within normal (<= 450 ms) in men	<=450	sex == "MALE"	ECO:0007307	8636-3	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.QTc	Q-T interval corrected	skos:relatedMatch		HP:0001657	Prolonged QT interval	semapv:ManualMappingCuration	0.9	per-sex gate: prolonged > 460 ms in women	>460	sex == "FEMALE"	ECO:0007307	8636-3	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:cardiac_ecg.QTc	Q-T interval corrected	skos:relatedMatch	Not	HP:0001657	Prolonged QT interval	semapv:ManualMappingCuration	0.9	per-sex gate: within normal (<= 460 ms) in women	<=460	sex == "FEMALE"	ECO:0007307	8636-3	AHA/ACCF/HRS 2009 ECG standardization recommendations
+b2ai:wearable_blood_glucose.cgm_gmi	Glucose management indicator	skos:relatedMatch		HP:0003074	Hyperglycemia	semapv:ManualMappingCuration	0.7	GMI at or above the consensus target of 7.0 % over the wear window; PENDING CLINICAL REVIEW of the cut-point; present pole only	>=7.0		ECO:0007307	97506-0	International consensus on time in range (Battelino et al., Diabetes Care 2019): GMI target < 7 %
