@@ -47,8 +47,8 @@ never from a data row.
 | `clinical_data/` | 7 | OMOP: person, visit, condition, measurement, observation, **procedure_occurrence**, `dqd_omop.json` |
 | root | 9 | `participants.tsv/.json`, `dataset_description.json`, `healthsheet.md`, … |
 
-Total 118,508 files; about 2.4k distinct participant folder ids (docs.aireadi.org v3.0.0
-documents 2,280 participants, 15 modalities, 356,343 files, 3.82 TB).
+Total 118,508 files (docs.aireadi.org v3.0.0 documents 2,280 participants, 15 modalities,
+356,343 files, 3.82 TB).
 
 **Gap to confirm first:** `retinal_oct/`, `retinal_octa/` and `retinal_flio/` are absent from
 the manifest, as is any modality flag for them, yet v3 ships all three. Either the delivery is
@@ -57,21 +57,19 @@ should know whether they are coming.
 
 ### The protected supplements (headers and dictionary only)
 
-- **Demographics** (`columns_from_AIREADi_Demographics.txt`, dictionary sheet "Protected -
-  demographics"): `studyid`; `scrsex` (sex assigned at birth: F/M/I/888/777); `genderid`
+- **Demographics** (per the protected dictionary, sheet "Protected - demographics"):
+  `studyid`; `scrsex` (sex assigned at birth: F/M/I/888/777); `genderid`
   (man / woman / non-binary / other / prefer not); `race___*` (9 checkboxes) and `race2`
   (single best); `ethnic___*` (10 checkboxes); `raceot`, `ethnicot`, `racetrib`, `ancestry`,
   `genderidot` (free text); `rp_childpot` (pregnant — an exclusion criterion, so always 0);
   `cl_maristat`; `mhcat_dmtaot`, `mhoccur_cnsot`, `mhoccur_cnrot` (free-text "other" for
   diabetes type, nervous-system and cancer history); `pxhic6`, `pxhic9` (insurance);
   `dvenvlocn` (sensor location); `exportzip`.
-- **Medications** (`AIREADi_Medications_Protected Dataset_PilotthruWave4.xlsx`): one row per
-  participant × medication, REDCap repeat instrument `current_medications`. Columns
-  `cmname` (free text), `cmroute` (12 coded routes + other), `cmrouteot`, `cmdos`, `cmdosu`
-  (20 coded units), `cmdosfrq` (ONCE/PRN/QD/BID/TID/QID/QOD/QW/QM/UNK/888), `rxnorm_code`,
-  `rxnorm_term` (BioPortal RxNorm). Structural aggregates only: 19,252 rows over 2,179
-  participants; RxNorm code present on 91% of rows; 4,892 distinct codes; 8,661 distinct
-  free-text names.
+- **Medications** (the `current_medications` REDCap export): one row per participant ×
+  medication. Columns per the protected dictionary: `cmname` (free text), `cmroute` (12
+  coded routes + other), `cmrouteot`, `cmdos`, `cmdosu` (20 coded units), `cmdosfrq`
+  (ONCE/PRN/QD/BID/TID/QID/QOD/QW/QM/UNK/888), `rxnorm_code`, `rxnorm_term` (BioPortal
+  RxNorm). Most rows carry an RxNorm code; the rest have only the free-text name.
 
 ## Steps
 
@@ -332,8 +330,7 @@ medical-history absent pole; the first review cycle through the sheet.
 ## What was and was not read for this plan
 
 Read: the Google Doc brief; `file-manifest.tsv` (paths only, aggregated); the protected data
-dictionary (documentation under the DUA's own definition); the demographics **column list**;
-the medications sheet's **header, row count, null fraction and distinct-value counts per
-column** (no values); public docs.aireadi.org v3 pages; `AI-READI/DataElementMaps`; the
+dictionary (documentation under the DUA's own definition); the column headers of the two
+supplements (no values); public docs.aireadi.org v3 pages; `AI-READI/DataElementMaps`; the
 OMOP2OBO Zenodo mapping sets. Not read: anything under `data/`, `out/real/`,
 `out/synthetic/aireadi/`, or the planning inventories under `out/aireadi_mapping_planning/`.

@@ -5,8 +5,8 @@
 # table, so this is the only medication source. OPTIONAL: absent, nothing changes.
 #
 # SOURCE. Column names, the coded answer lists and the BioPortal RxNorm annotation come
-# from the protected data dictionary (sheet "Projected - Medications"). Of the rows in the
-# wave-4 delivery, 91% carry an rxnorm_code (structural count; no value was read).
+# from the protected data dictionary (sheet "Projected - Medications"). Not every row
+# carries an rxnorm_code; the report counts the ones that do not.
 #
 # THE AGENT IS THE SOURCE'S RxNorm CODE, used as given. RxNorm is a legitimate
 # OntologyClass source for Treatment.agent; the CUI may be at ingredient or clinical-drug
