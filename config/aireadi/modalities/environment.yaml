@@ -1,0 +1,13 @@
+# AI-READI environment/ (LeeLab Anura home sensor, 10 days, ESDS CSV) -> File link only
+#
+# Humidity, temperature, light, particulate matter, VOC and NOx at 5-second intervals in
+# the participant's home. Exposure, not phenotype: nothing here is a property of the
+# participant, so no Measurement is emitted. The file is linked with its sampling extent
+# so a consumer can find it. `sensor_location` is a free-text room name and is not carried.
+datatype: environment
+table: environment
+manifest: manifest.tsv
+id_column: participant_id
+file_columns: [env_sensor_filepath]
+file_format: ESDS-CSV
+attribute_columns: [manufacturer, manufacturers_model_name, sensor_sampling_extent_in_days]

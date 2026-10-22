@@ -236,6 +236,30 @@ def aireadi(
             "config/aireadi/supplements/*.yaml, resolved under --input."
         ),
     ),
+    files: str = typer.Option(
+        "none",
+        "--files",
+        help=(
+            "Link the modality files (imaging, ECG, CGM, wearable, environment) from their "
+            "manifests as Phenopacket.files: 'none' (default), 'folder' (one File per "
+            "participant per device directory, with a fileCount) or 'file' (one per file, "
+            "with laterality/protocol attributes). Never embeds a file."
+        ),
+    ),
+    device_summaries: bool = typer.Option(
+        False,
+        "--device-summaries",
+        help=(
+            "Emit the ECG intervals from the ECG manifest and the CGM / wearable window "
+            "statistics (mean, CV, time in LOINC ranges, GMI) as Measurements. Raw series "
+            "are never emitted as samples."
+        ),
+    ),
+    file_uri_base: str = typer.Option(
+        None,
+        "--file-uri-base",
+        help="Prefix for linked file URIs (default: release-relative paths).",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log per-table warnings."),
 ) -> None:
     """Ingest the Bridge2AI AI-READI dataset (OMOP CDM) into one phenopacket per participant."""
@@ -254,10 +278,20 @@ def aireadi(
         typer.echo(f"target {target!r} is not implemented yet", err=True)
         raise typer.Exit(code=2)
 
-    source = AireadiSource(root=input, config_dir=config, supplements_dir=supplements_dir)
+    try:
+        source = AireadiSource(
+            root=input,
+            config_dir=config,
+            supplements_dir=supplements_dir,
+            files=files,
+            device_summaries=device_summaries,
+        )
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
     # The generator is handed straight to the emitter: OMOP tables are large (the synthetic
     # measurement table is 768k rows) and write_all holds nothing.
-    written = PhenopacketEmitter().write_all(source.read(), output)
+    written = PhenopacketEmitter(file_uri_base=file_uri_base).write_all(source.read(), output)
     typer.echo(f"Wrote {written} phenopackets to {output}")
     typer.echo(source.report.render())
 

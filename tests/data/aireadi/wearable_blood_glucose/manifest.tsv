@@ -1,0 +1,3 @@
+participant_id	modality	glucose_filepath	glucose_level_record_count	average_glucose_level_mg_dl	glucose_sensor_sampling_duration_days	glucose_sensor_id	manufacturer	manufacturers_model_name
+900001	continuous_glucose_monitoring	/wearable_blood_glucose/continuous_glucose_monitoring/dexcom_g6/900001/900001_DEX.json	12	0	1.0	FIXTURE-DEX-1	Dexcom	Dexcom G6
+900002	continuous_glucose_monitoring	/wearable_blood_glucose/continuous_glucose_monitoring/dexcom_g6/900002/900002_DEX.json	0	0	0.0	FIXTURE-DEX-2	Dexcom	Dexcom G6

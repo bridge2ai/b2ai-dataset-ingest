@@ -1,0 +1,3 @@
+participant_id	modality	heart_rate_filepath	oxygen_saturation_filepath	sleep_filepath	physical_activity_filepath	manufacturer	manufacturers_model_name
+900001	wearable_activity_monitor	/wearable_activity_monitor/heart_rate/garmin_vivosmart5/900001/900001_heartrate.json	/wearable_activity_monitor/oxygen_saturation/garmin_vivosmart5/900001/900001_oxygensaturation.json			Garmin	Vivosmart 5
+900003	wearable_activity_monitor	/wearable_activity_monitor/heart_rate/garmin_vivosmart5/900003/900003_heartrate.json				Garmin	Vivosmart 5

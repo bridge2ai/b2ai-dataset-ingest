@@ -49,6 +49,11 @@ CREATED_BY = "b2ai-dataset-ingest"
 class PhenopacketEmitter(Emitter):
     target_id = "phenopacket"
 
+    def __init__(self, file_uri_base: str | None = None) -> None:
+        #: Prefix joined onto every linked file's release-relative path, so a consumer can
+        #: point the packets at their own copy of the release. None leaves them relative.
+        self.file_uri_base = file_uri_base
+
     def emit(self, participant: Participant) -> pp.Phenopacket:
         """Build a schema-v2 ``Phenopacket`` from one canonical participant."""
         packet = pp.Phenopacket(id=participant.individual.id)
@@ -64,6 +69,8 @@ class PhenopacketEmitter(Emitter):
             packet.medical_actions.append(_medical_action(treatment))
         for uri in participant.audio_references:
             packet.files.append(pp.File(uri=uri))
+        for reference in participant.files:
+            packet.files.append(_file(reference, participant.individual.id, self.file_uri_base))
 
         # MetaData is derived from the fully-built body so it declares a Resource for
         # exactly the ontology prefixes actually present (no more, no less).
@@ -203,6 +210,20 @@ def _phenotypic_feature(observation) -> pp.PhenotypicFeature:
     for item in observation.evidence:
         feature.evidence.append(_evidence(item))
     return feature
+
+
+def _file(reference, participant_id: str, base: str | None) -> pp.File:
+    """A linked bulk file: release-relative (or re-based) URI plus its attributes."""
+    uri = reference.uri
+    if base:
+        uri = base.rstrip("/") + "/" + uri.lstrip("/")
+    message = pp.File(uri=uri)
+    if reference.individual_file_id:
+        message.individual_to_file_identifiers[participant_id] = reference.individual_file_id
+    for key, value in sorted(reference.attributes.items()):
+        if value:
+            message.file_attributes[key] = value
+    return message
 
 
 def _medical_action(treatment) -> pp.MedicalAction:

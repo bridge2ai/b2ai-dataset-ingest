@@ -1,0 +1,81 @@
+# AI-READI wearable_blood_glucose/ (Dexcom G6, 10 days, mHealth JSON) -> File link + summaries
+#
+# One JSON per participant holding ~2,880 five-minute readings. The series NEVER enters
+# the packet (docs/plans/0002 step 20); the international consensus CGM metrics do, one
+# Measurement each over the wear window, with the reading count and span in the
+# description so a consumer can judge the window (consensus asks for >= 70% of 14 days;
+# AI-READI wore the sensor for 10).
+#
+# LOINC: the time-in-range codes are defined by LOINC's own bands, which this file follows
+# EXACTLY rather than the consensus's merged bands -- 97510-2 is 70-180 mg/dL, 104641-6
+# "low" is 54-69, 104642-4 "very low" is < 54, 104640-8 "high" is 181-250, 104639-0
+# "very high" is > 250, 97506-0 is the Glucose Management Indicator. Codes verified by
+# exact lookup against the NLM Clinical Table LOINC service, 2026-10-22. Mean and CV carry
+# project-local ids: no LOINC code names "mean sensor glucose over a reporting period".
+#
+# GMI (%) = 3.31 + 0.02392 x mean glucose in mg/dL (Bergenstal et al., Diabetes Care 2018).
+# CV = 100 x SD / mean. Dexcom clamps out-of-range readings to the strings "Low" / "High";
+# those are counted and skipped, never coerced to 40 / 400.
+datatype: wearable_blood_glucose
+table: wearable_blood_glucose
+manifest: manifest.tsv
+id_column: participant_id
+file_columns: [glucose_filepath]
+file_format: mHealth-JSON
+attribute_columns: [manufacturer, manufacturers_model_name]
+series:
+  name: cgm
+  file_column: glucose_filepath
+  key: [body, cgm]
+  value_path: [blood_glucose, value]
+  time_path: [effective_time_frame, time_interval, start_date_time]
+  min_readings: 288         # one day of 5-minute readings; shorter series are counted, not summarised
+measures:
+  cgm_mean:
+    assay: { id: "b2ai:wearable_blood_glucose.cgm_mean", label: "Mean sensor glucose over the wear period" }
+    unit: { id: "UCUM:mg/dL", label: "milligram per deciliter" }
+    statistic: mean
+    description: "Mean of all sensor glucose readings"
+  cgm_cv:
+    assay: { id: "b2ai:wearable_blood_glucose.cgm_cv", label: "Sensor glucose coefficient of variation over the wear period" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: cv
+    description: "100 x SD / mean of sensor glucose"
+  cgm_gmi:
+    assay: { id: "LOINC:97506-0", label: "Glucose management indicator" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: gmi
+    description: "GMI = 3.31 + 0.02392 x mean sensor glucose (mg/dL)"
+  cgm_tir:
+    assay: { id: "LOINC:97510-2", label: "Glucose measurements in range out of Total glucose measurements during reporting period" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: percent_in_range
+    low: 70
+    high: 180
+    description: "Readings 70-180 mg/dL, percent of all readings"
+  cgm_tbr_low:
+    assay: { id: "LOINC:104641-6", label: "Time below range, low in Reporting Period Interstitial fluid by calculation" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: percent_in_range
+    low: 54
+    high: 69
+    description: "Readings 54-69 mg/dL, percent of all readings"
+  cgm_tbr_very_low:
+    assay: { id: "LOINC:104642-4", label: "Time below range, very low in Reporting Period Interstitial fluid by calculation" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: percent_in_range
+    high: 53
+    description: "Readings below 54 mg/dL, percent of all readings"
+  cgm_tar_high:
+    assay: { id: "LOINC:104640-8", label: "Time above range, high in Reporting Period Interstitial fluid by calculation" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: percent_in_range
+    low: 181
+    high: 250
+    description: "Readings 181-250 mg/dL, percent of all readings"
+  cgm_tar_very_high:
+    assay: { id: "LOINC:104639-0", label: "Time above range, very high in Reporting Period Interstitial fluid by calculation" }
+    unit: { id: "UCUM:%", label: "percent" }
+    statistic: percent_in_range
+    low: 251
+    description: "Readings above 250 mg/dL, percent of all readings"
