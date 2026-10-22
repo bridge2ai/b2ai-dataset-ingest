@@ -269,6 +269,15 @@ def validate_aireadi_cmd(
             "flag it -- see config/aireadi/conditions.yaml."
         ),
     ),
+    modalities: bool = typer.Option(
+        False,
+        "--modalities",
+        help=(
+            "Also inventory the non-clinical datatypes (retinal imaging, ECG, CGM, wearable, "
+            "environment) from their manifest.tsv files: rows, participants and devices per "
+            "datatype, and which documented datatypes the delivery lacks. Counts only."
+        ),
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log details."),
 ) -> None:
     """Preflight-check the AI-READI OMOP layout against its configs.
@@ -283,7 +292,9 @@ def validate_aireadi_cmd(
         level=logging.INFO if verbose else logging.WARNING,
         format="%(levelname)s %(name)s: %(message)s",
     )
-    report = validate_aireadi(root=input, config_dir=config, strict_coverage=strict_coverage)
+    report = validate_aireadi(
+        root=input, config_dir=config, strict_coverage=strict_coverage, modalities=modalities
+    )
     typer.echo(report.render())
     if report.errors:
         raise typer.Exit(code=1)

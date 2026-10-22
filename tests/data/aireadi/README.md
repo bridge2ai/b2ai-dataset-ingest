@@ -37,6 +37,8 @@ AI-READI publishes under CC-BY-4.0 at docs.aireadi.org. Rows are Data; schema is
 | A configured-but-unresolved condition | `mhoccur_ua` — skipped, never emitted as a `TODO` CURIE. |
 | A condition with no config entry at all | `mhoccur_nonesuch` — counted as unmapped. |
 | Fully redacted sex | `gender_concept_id = 0` on every `person.csv` row — AI-READI states that sex and race/ethnicity are removed from published releases. |
+| A Data Quality Dashboard report with two failed checks | `clinical_data/dqd_omop.json` — the preflight summarises it by table and check name; the `notesValue` free text and violated-row counts must never surface. |
+| Two of eight datatype directories, each with a manifest | `cardiac_ecg/manifest.tsv` (4 recordings over 3 participants, one with a blank PR interval) and `environment/manifest.tsv` — `validate-aireadi --modalities` counts these and flags the six absent datatypes. Paths are manifest rows only; no `.hea`/`.dat`/`.csv` payload is committed. |
 
 ## What the same rows exercise in the measurement → HPO derivation
 
