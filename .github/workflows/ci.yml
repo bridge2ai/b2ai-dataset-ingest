@@ -15,7 +15,12 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Sync dependencies
-        run: uv sync
+        # schema: SchemaView loads schema/ in tests and renders the gate schemas to SSSOM;
+        # supplements: openpyxl for the review-loop workbook tests.
+        run: uv sync --extra schema --extra supplements
+
+      - name: Gate schemas render to the committed SSSOM
+        run: uv run python scripts/gates_to_sssom.py --check
 
       - name: Lint
         run: uv run ruff check

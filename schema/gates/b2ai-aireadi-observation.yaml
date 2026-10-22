@@ -1,0 +1,1066 @@
+id: https://w3id.org/bridge2ai/b2ai-dataset-ingest/gates/b2ai-aireadi-observation
+name: b2ai-aireadi-observation
+description: Value gates for one SSSOM mapping set, authored as LinkML class rules. The SSSOM file is
+  GENERATED from this schema by scripts/gates_to_sssom.py; edit here, regenerate, commit both.
+imports:
+- linkml:types
+- gate_base
+prefixes:
+  linkml: https://w3id.org/linkml/
+  b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+  HP: http://purl.obolibrary.org/obo/HP_
+  ECO: http://purl.obolibrary.org/obo/ECO_
+  skos: http://www.w3.org/2004/02/skos/core#
+  semapv: https://w3id.org/semapv/vocab/
+  github: https://github.com/
+  obo: http://purl.obolibrary.org/obo/
+default_prefix: b2ai
+default_range: string
+annotations:
+  sssom_header: |
+    curie_map:
+      b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
+      HP: http://purl.obolibrary.org/obo/HP_
+      ECO: http://purl.obolibrary.org/obo/ECO_
+      skos: http://www.w3.org/2004/02/skos/core#
+      semapv: https://w3id.org/semapv/vocab/
+      github: https://github.com/
+      obo: http://purl.obolibrary.org/obo/
+    mapping_set_id: https://github.com/sujaypatil96/b2ai-dataset-ingest/mappings/b2ai-aireadi-observation.sssom.tsv
+    mapping_set_version: '2026-10-22'
+    license: https://creativecommons.org/publicdomain/zero/1.0/
+    mapping_provider: https://github.com/sujaypatil96/b2ai-dataset-ingest
+    creator_id:
+      - github:justaddcoffee
+    subject_source: aireadi/1.0.0
+    object_source: obo:hp
+    object_source_version: hp/releases/2026-02-16
+    mapping_tool: 'oaklib (sqlite:obo:hp); every object_id verified against the pinned hp.json (obographs)'
+    mapping_date: '2026-09-23'
+    comment: AI-READI clinical_data/observation.csv items mapped to HPO. EVERY ROW IS SELF-REPORT (evidence_code ECO:0006160), so the questionnaire rules apply unchanged - only exactMatch and broadMatch rows gate, every gate is bounded (in {..} or >=n & <=m, never an open >=, so a refusal code 555/777/888/999 cannot fire it), and ONLY PRESENCE is asserted, because a low answer denies the symptom within the instrument's recall window and not the phenotype (docs/mapping-conventions.md, Why absence is not asserted). Subjects are b2ai:observation.<redcap_variable>; the OMOP table qualifier matters - the same variables in condition_occurrence are asserted conditions, mapped to MONDO in b2ai-aireadi-conditions. Answer values are the stored value_as_number; ces5 and ces8 are stored already reverse-scored (3 = rarely) so higher always means more distress. GATED ROWS - the CES-D-10 items and total, which config/aireadi/observation/cesd10.yaml ingests. Cut-points follow the repo rule of comparing answer LABELS, not integers - CES-D's '1-2 days of the past week' is the endorsement PHQ-9 gates at 'Several days' - and are marked pending the same clinical review the Voice set had; an earlier adversarial review disputed direction and cut-point on several proposed CES-D rows, and each row records its reasoning so a reviewer can rule on it. UNGATED ROWS, deliberately - the medical-history grid (mhoccur_*, mhterm_*, mh_*), falls, and the vision-function items are mapped term-to-term with the intended gate written in the comment, but carry no when_value because scope.yaml does not ingest them and a gated row must name an emitted assay (tests/test_config_mappings.py). Landing those gates is a config change plus filling the column, nothing else. NOT MAPPED, and why - ces9 'I felt lonely' (no HPO term for loneliness); PAID-5 (distress about living with diabetes is a disease-specific appraisal, not a phenotype - see paid5.yaml); mhoccur_ms (a disease with no HPO phenotype term; MONDO only); diet, substance-use, self-management, family-history, medication, social-determinant, imaging-flag and administrative families (not phenotypes of the participant).
+    extension_definitions:
+      - slot_name: when_value
+        property: b2ai:when_value
+        type_hint: xsd:string
+      - slot_name: evidence_code
+        property: b2ai:evidence_code
+        type_hint: xsd:string
+  sssom_columns: "subject_id\tsubject_label\tpredicate_id\tobject_id\tobject_label\tmapping_justification\t\
+    confidence\tcomment\twhen_value\tevidence_code"
+classes:
+  ObservationCes1:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces1
+    title: Bothered by things that are not usually bothersome
+    rules:
+    - title: Irritability, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000737
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Irritability
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'being bothered by things that usually do not bother one is a facet of irritability,
+          so the HPO term is broader; gated one rung higher (3+ days) than the clearer items. CES-D-10,
+          past-week frequency 0-3; 1 = ''Some or a little of the time (1-2 days)'' is the same endorsement
+          PHQ-9 gates at ''Several days'' over two weeks, so the gate is in {1,2,3} (bounded, never >=,
+          so a refusal code cannot fire it). Presence only: the recall window is one week'
+        evidence_code: ECO:0006160
+  ObservationCes2:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces2
+    title: Trouble focusing
+    rules:
+    - title: Diminished ability to concentrate, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 1
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0031987
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:exactMatch
+        object_label: Diminished ability to concentrate
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: '''trouble keeping my mind on what I was doing'' is the HPO definition of the term. CES-D-10,
+          past-week frequency 0-3; 1 = ''Some or a little of the time (1-2 days)'' is the same endorsement
+          PHQ-9 gates at ''Several days'' over two weeks, so the gate is in {1,2,3} (bounded, never >=,
+          so a refusal code cannot fire it). Presence only: the recall window is one week'
+        evidence_code: ECO:0006160
+  ObservationCes3:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces3
+    title: Feeling depressed
+    rules:
+    - title: Pathological sadness, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 1
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:5200273
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:exactMatch
+        object_label: Pathological sadness
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.9'
+        comment: '''I felt depressed''; same target and reasoning as the Voice PHQ-9 feeling_depressed
+          row. CES-D-10, past-week frequency 0-3; 1 = ''Some or a little of the time (1-2 days)'' is the
+          same endorsement PHQ-9 gates at ''Several days'' over two weeks, so the gate is in {1,2,3} (bounded,
+          never >=, so a refusal code cannot fire it). Presence only: the recall window is one week'
+        evidence_code: ECO:0006160
+  ObservationCes4:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces4
+    title: Feeling everything is too much of an effort
+    rules:
+    - title: Fatigue, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 1
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012378
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Fatigue
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.8'
+        comment: '''everything I did was an effort'' is one presentation of fatigue (lack of energy and
+          motivation); Fatigue subsumes it. CES-D-10, past-week frequency 0-3; 1 = ''Some or a little
+          of the time (1-2 days)'' is the same endorsement PHQ-9 gates at ''Several days'' over two weeks,
+          so the gate is in {1,2,3} (bounded, never >=, so a refusal code cannot fire it). Presence only:
+          the recall window is one week'
+        evidence_code: ECO:0006160
+  ObservationCes5:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces5
+    title: Feeling hopeful about the future
+    narrow_mappings:
+    - HP:5200271
+    annotations:
+      HP:5200271:
+        annotations:
+          object_label: Hopelessness
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.6'
+          comment: 'UNGATED. ''I felt hopeful about the future'', stored reverse-scored (3 = rarely).
+            Rarely feeling hopeful is weaker than hopelessness, so the HPO term is the narrower, stronger
+            phenomenon and a low-hope answer cannot establish it (docs/mapping-conventions.md: direction
+            is decided by the concepts)'
+          evidence_code: ECO:0006160
+  ObservationCes6:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces6
+    title: Feeling fearful
+    rules:
+    - title: Anxiety, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 1
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000739
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Anxiety
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: '''I felt fearful''; fear is one facet of the Anxiety term''s ''nervousness, tension,
+          or panic'', so the term is broader. CES-D-10, past-week frequency 0-3; 1 = ''Some or a little
+          of the time (1-2 days)'' is the same endorsement PHQ-9 gates at ''Several days'' over two weeks,
+          so the gate is in {1,2,3} (bounded, never >=, so a refusal code cannot fire it). Presence only:
+          the recall window is one week'
+        evidence_code: ECO:0006160
+  ObservationCes7:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces7
+    title: Restless sleep
+    rules:
+    - title: Sleep disturbance, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 1
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002360
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Sleep disturbance
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: '''My sleep was restless''; Sleep disturbance subsumes restless sleep without committing
+          to insomnia or fragmentation. CES-D-10, past-week frequency 0-3; 1 = ''Some or a little of the
+          time (1-2 days)'' is the same endorsement PHQ-9 gates at ''Several days'' over two weeks, so
+          the gate is in {1,2,3} (bounded, never >=, so a refusal code cannot fire it). Presence only:
+          the recall window is one week'
+        evidence_code: ECO:0006160
+  ObservationCes8:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces8
+    title: Feeling happy
+    narrow_mappings:
+    - HP:0012154
+    annotations:
+      HP:0012154:
+        annotations:
+          object_label: Anhedonia
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.6'
+          comment: UNGATED. 'I was happy', stored reverse-scored (3 = rarely). Rarely feeling happy is
+            not anhedonia (inability to experience pleasure); the HPO term is the narrower, stronger phenomenon,
+            so no answer establishes it
+          evidence_code: ECO:0006160
+  ObservationCes10:
+    is_a: GatedItem
+    class_uri: b2ai:observation.ces10
+    title: Lack of energy
+    rules:
+    - title: Fatigue, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 1
+            - equals_number: 2
+            - equals_number: 3
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0012378
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:exactMatch
+        object_label: Fatigue
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: '''I could not get going''; LOINC names this item ''Lack of energy'', which is the Fatigue
+          definition. CES-D-10, past-week frequency 0-3; 1 = ''Some or a little of the time (1-2 days)''
+          is the same endorsement PHQ-9 gates at ''Several days'' over two weeks, so the gate is in {1,2,3}
+          (bounded, never >=, so a refusal code cannot fire it). Presence only: the recall window is one
+          week'
+        evidence_code: ECO:0006160
+  ObservationCestl:
+    is_a: GatedItem
+    class_uri: b2ai:observation.cestl
+    title: CES-D-10 total score
+    rules:
+    - title: Depression, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 10
+            maximum_value: 30
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000716
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Depression
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: CES-D-10 total >= 10 is the published screening cut-off for depressive symptoms (Andresen
+          et al. 1994); a positive SCREEN is consistent with the Depression term's 'frequently experiencing
+          feelings of being down...' but is not a diagnosis, hence broadMatch and 0.75. Bounded at the
+          instrument maximum of 30. Presence only
+        evidence_code: ECO:0006160
+  ObservationMhA1c:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mh_a1c
+    title: Elevated A1C levels (elevated blood sugars)
+    exact_mappings:
+    - HP:0040217
+    annotations:
+      HP:0040217:
+        annotations:
+          object_label: Elevated hemoglobin A1c
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.9'
+          comment: 'a lab finding, not a diagnosis; the conditions set leaves it TODO for exactly that
+            reason and this is the HPO layer it belongs in. UNGATED for now: mhoccur_*/mhterm_*/mh_* are
+            dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurHbp:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_hbp
+    title: High blood pressure
+    exact_mappings:
+    - HP:0000822
+    annotations:
+      HP:0000822:
+        annotations:
+          object_label: Hypertension
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept; both an HPO phenotype and a MONDO disease. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurLbp:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_lbp
+    title: Low blood pressure
+    exact_mappings:
+    - HP:0002615
+    annotations:
+      HP:0002615:
+        annotations:
+          object_label: Hypotension
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurClsh:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_clsh
+    title: High blood cholesterol
+    exact_mappings:
+    - HP:0003124
+    annotations:
+      HP:0003124:
+        annotations:
+          object_label: Hypercholesterolemia
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.9'
+          comment: '''High blood cholesterol'' is hypercholesterolemia. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurObs:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_obs
+    title: Obesity
+    exact_mappings:
+    - HP:0001513
+    annotations:
+      HP:0001513:
+        annotations:
+          object_label: Obesity
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurEar:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_ear
+    title: Hearing impairment
+    exact_mappings:
+    - HP:0000365
+    annotations:
+      HP:0000365:
+        annotations:
+          object_label: Hearing impairment
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurCrt:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_crt
+    title: Cataracts (in one or both eyes)
+    exact_mappings:
+    - HP:0000518
+    annotations:
+      HP:0000518:
+        annotations:
+          object_label: Cataract
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: '''in one or both eyes'': laterality is not part of the concept. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurGlc:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_glc
+    title: Glaucoma (in one or both eyes)
+    exact_mappings:
+    - HP:0000501
+    annotations:
+      HP:0000501:
+        annotations:
+          object_label: Glaucoma
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurDed:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_ded
+    title: Dry eye (in one or both eyes)
+    exact_mappings:
+    - HP:0001097
+    annotations:
+      HP:0001097:
+        annotations:
+          object_label: Keratoconjunctivitis sicca
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.9'
+          comment: 'dry eye syndrome is keratoconjunctivitis sicca. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurAmd:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_amd
+    title: Age-related macular degeneration (AMD) (in one or both eyes)
+    broad_mappings:
+    - HP:0000608
+    annotations:
+      HP:0000608:
+        annotations:
+          object_label: Macular degeneration
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: 'age-related macular degeneration is one kind of macular degeneration; HPO has no AMD-specific
+            term. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurPdr:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_pdr
+    title: Diabetic retinopathy (in one or both eyes)
+    broad_mappings:
+    - HP:0000488
+    annotations:
+      HP:0000488:
+        annotations:
+          object_label: Retinopathy
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.8'
+          comment: 'diabetic retinopathy is one kind of retinopathy; HPO has no diabetes-specific term.
+            UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurRvo:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_rvo
+    title: Retinal vascular occlusion ("stroke in the eye or eye vessels" - in one or both eyes)
+    narrow_mappings:
+    - HP:0012636
+    - HP:0025326
+    annotations:
+      HP:0012636:
+        annotations:
+          object_label: Retinal venous occlusion
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'the item conflates venous and arterial occlusion; each HPO term is one sense of it,
+            so both are narrowMatch and neither can gate. UNGATED for now: mhoccur_*/mhterm_*/mh_* are
+            dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+      HP:0025326:
+        annotations:
+          object_label: Retinal arterial occlusion
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'see the venous row. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurCogn:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_cogn
+    title: Mild cognitive impairment (known as "MCI"; mild but noticeable cognitive changes, may slow
+      or interfere with daily activities but does not stop them)
+    broad_mappings:
+    - HP:0100543
+    annotations:
+      HP:0100543:
+        annotations:
+          object_label: Cognitive impairment
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.85'
+          comment: 'mild cognitive impairment is one degree of cognitive impairment. UNGATED for now:
+            mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml (the affirmative
+            is already a MONDO Disease from condition_occurrence) and a gated row must name an emitted
+            assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not
+            to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'', not ''absent''.
+            An HPO row here is complementary to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurAd:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_ad
+    title: 'Dementia (Examples: Alzheimer''s Disease, vascular dementia, etc)'
+    exact_mappings:
+    - HP:0000726
+    annotations:
+      HP:0000726:
+        annotations:
+          object_label: Dementia
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurStrk:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_strk
+    title: Stroke
+    exact_mappings:
+    - HP:0001297
+    annotations:
+      HP:0001297:
+        annotations:
+          object_label: Stroke
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurMi:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_mi
+    title: Heart attack
+    exact_mappings:
+    - HP:0001658
+    annotations:
+      HP:0001658:
+        annotations:
+          object_label: Myocardial infarction
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: '''Heart attack'' is myocardial infarction. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurOa:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_oa
+    title: Osteoporosis (loss of bone density)
+    exact_mappings:
+    - HP:0000939
+    annotations:
+      HP:0000939:
+        annotations:
+          object_label: Osteoporosis
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'same concept (the variable name says oa; the label says osteoporosis). UNGATED for
+            now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml (the affirmative
+            is already a MONDO Disease from condition_occurrence) and a gated row must name an emitted
+            assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not
+            to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'', not ''absent''.
+            An HPO row here is complementary to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurRa:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_ra
+    title: Arthritis (joint pain)
+    narrow_mappings:
+    - HP:0001369
+    - HP:0002829
+    annotations:
+      HP:0001369:
+        annotations:
+          object_label: Arthritis
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: '''Arthritis (joint pain)'' conflates arthritis with arthralgia; each HPO term is one
+            sense, so narrowMatch, ungateable. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by
+            config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease from condition_occurrence)
+            and a gated row must name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap
+            1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never
+            told'', not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for
+            the Voice confounders'
+          evidence_code: ECO:0006160
+      HP:0002829:
+        annotations:
+          object_label: Arthralgia
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'see the arthritis row. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurCa:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_ca
+    title: Cancer (any type)
+    broad_mappings:
+    - HP:0002664
+    annotations:
+      HP:0002664:
+        annotations:
+          object_label: Neoplasm
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.85'
+          comment: '''Cancer (any type)'' is a malignant neoplasm; Neoplasm subsumes it. UNGATED for now:
+            mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml (the affirmative
+            is already a MONDO Disease from condition_occurrence) and a gated row must name an emitted
+            assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not
+            to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'', not ''absent''.
+            An HPO row here is complementary to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurRnl:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_rnl
+    title: Kidney problems
+    broad_mappings:
+    - HP:0000077
+    annotations:
+      HP:0000077:
+        annotations:
+          object_label: Abnormality of the kidney
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.75'
+          comment: '''Kidney problems'' is any kidney abnormality. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurUa:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_ua
+    title: 'Urinary problems (Examples: urinary tract infections, incontinence, prostate problems)'
+    broad_mappings:
+    - HP:0000079
+    annotations:
+      HP:0000079:
+        annotations:
+          object_label: Abnormality of the urinary system
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'conflates infection, incontinence and prostate; the urinary-system abnormality term
+            genuinely subsumes every sense, which is the sanctioned way to map a conflated item (docs/mapping-conventions.md).
+            UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurGi:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_gi
+    title: 'Digestive problems (Examples: stomach ulcer, gastrointestinal problems, hiatal hernia)'
+    broad_mappings:
+    - HP:0011024
+    annotations:
+      HP:0011024:
+        annotations:
+          object_label: Abnormality of the gastrointestinal tract
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.75'
+          comment: '''Digestive problems'' is any gastrointestinal abnormality. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurPlm:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_plm
+    title: 'Chronic pulmonary (lung) problems (Examples: emphysema, asthma, tuberculosis, asbestosis)'
+    broad_mappings:
+    - HP:0002086
+    annotations:
+      HP:0002086:
+        annotations:
+          object_label: Abnormality of the respiratory system
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.75'
+          comment: '''Chronic pulmonary problems (emphysema, asthma, tuberculosis...)'' are all respiratory-system
+            abnormalities. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurCvdot:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_cvdot
+    title: 'Other heart issues (Examples: pacemaker, heart valve disease, open heart surgery)'
+    broad_mappings:
+    - HP:0001626
+    annotations:
+      HP:0001626:
+        annotations:
+          object_label: Abnormality of the cardiovascular system
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.6'
+          comment: 'conflates a device, a valve disease and a procedure; each implies a cardiovascular
+            abnormality, which the term subsumes. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped
+            by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease from
+            condition_occurrence) and a gated row must name an emitted assay. Intended gate once the item
+            is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item, so presence
+            only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary to the MONDO
+            conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurCirc:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_circ
+    title: 'Circulation problems (Examples: arteriosclerosis, atherosclerosis, blood clots in lungs or
+      leg veins'
+    broad_mappings:
+    - HP:0011028
+    annotations:
+      HP:0011028:
+        annotations:
+          object_label: Abnormality of blood circulation
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.6'
+          comment: '''Circulation problems (arteriosclerosis, atherosclerosis, blood clots)''; the circulation-abnormality
+            term subsumes every example. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurCns:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_cns
+    title: Other neurological conditions
+    broad_mappings:
+    - HP:0000707
+    annotations:
+      HP:0000707:
+        annotations:
+          object_label: Abnormality of the nervous system
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'residual ''Other neurological conditions''. UNGATED for now: mhoccur_*/mhterm_*/mh_*
+            are dropped by config/aireadi/observation/scope.yaml (the affirmative is already a MONDO Disease
+            from condition_occurrence) and a gated row must name an emitted assay. Intended gate once
+            the item is ingested: ==1 (REDCap 1 Yes / 0 No / 777 prefer not to say). Lifetime-scoped item,
+            so presence only: ''no'' is ''never told'', not ''absent''. An HPO row here is complementary
+            to the MONDO conditions set, as for the Voice confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurPd:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_pd
+    title: Parkinson's disease
+    related_mappings:
+    - HP:0001300
+    annotations:
+      HP:0001300:
+        annotations:
+          object_label: Parkinsonism
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'Parkinson disease is a DISEASE (MONDO in the conditions set); parkinsonism is its
+            characteristic phenotype, so relatedMatch and never gated (docs/mapping-conventions.md, Phenotype
+            or disease?). UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhtermDm2:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhterm_dm2
+    title: Type II Diabetes
+    exact_mappings:
+    - HP:0005978
+    annotations:
+      HP:0005978:
+        annotations:
+          object_label: Type II diabetes mellitus
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'HPO carries the phenotype term for type 2 diabetes; complementary to MONDO:0005148
+            in the conditions set. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhtermDm1:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhterm_dm1
+    title: Type I Diabetes
+    exact_mappings:
+    - HP:0100651
+    annotations:
+      HP:0100651:
+        annotations:
+          object_label: Type I diabetes mellitus
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.95'
+          comment: 'as for type 2. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhtermPredm:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhterm_predm
+    title: Pre-diabetes
+    broad_mappings:
+    - HP:0001952
+    annotations:
+      HP:0001952:
+        annotations:
+          object_label: Glucose intolerance
+          mapping_justification: semapv:ManualMappingCuration
+          confidence: '0.7'
+          comment: 'prediabetes is impaired fasting glucose and/or impaired glucose tolerance; Glucose
+            intolerance subsumes both. UNGATED for now: mhoccur_*/mhterm_*/mh_* are dropped by config/aireadi/observation/scope.yaml
+            (the affirmative is already a MONDO Disease from condition_occurrence) and a gated row must
+            name an emitted assay. Intended gate once the item is ingested: ==1 (REDCap 1 Yes / 0 No /
+            777 prefer not to say). Lifetime-scoped item, so presence only: ''no'' is ''never told'',
+            not ''absent''. An HPO row here is complementary to the MONDO conditions set, as for the Voice
+            confounders'
+          evidence_code: ECO:0006160
+  ObservationMhoccurFall:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_fall
+    title: Have you fallen in the last 12 months? (a fall is defined as an event which results in a person
+      coming to rest inadvertently on the ground or floor or other lower level)
+    rules:
+    - title: Falls, present
+      preconditions:
+        slot_conditions:
+          value:
+            equals_number: 1
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002527
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:exactMatch
+        object_label: Falls
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.85'
+        comment: answered yes to a fall in the last 12 months (1 Yes / 0 No; 777 screened). Self-report,
+          presence only.
+        evidence_code: ECO:0006160
+  ObservationMhoccurFallot:
+    is_a: GatedItem
+    class_uri: b2ai:observation.mhoccur_fallot
+    title: If so, how many times in the last 12 months?
+    rules:
+    - title: Frequent falls, present
+      preconditions:
+        slot_conditions:
+          value:
+            minimum_value: 2
+            maximum_value: 365
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0002359
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Frequent falls
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.75'
+        comment: two or more falls in the last 12 months, the usual recurrent-falls definition; bounded
+          above so a refusal code can never fire it. Self-report, presence only; PENDING CLINICAL REVIEW
+          of the cut-point.
+        evidence_code: ECO:0006160
+  ObservationVia1:
+    is_a: GatedItem
+    class_uri: b2ai:observation.via1
+    title: 'How much difficulty, if any, do you have in recognizing a friend across the street? Would
+      you say:'
+    rules:
+    - title: Visual impairment, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 3
+            - equals_number: 4
+            - equals_number: 5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000505
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Visual impairment
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: 'moderate, extreme difficulty or unable to recognise a friend across the street because
+          of eyesight (1-5 ascending; 777 screened). broadMatch: the item is one functional consequence
+          of visual impairment. PENDING CLINICAL REVIEW.'
+        evidence_code: ECO:0006160
+  ObservationVia2:
+    is_a: GatedItem
+    class_uri: b2ai:observation.via2
+    title: 'How much difficulty, if any, do you have reading print in newspapers, magazines, recipes,
+      menus, or numbers on the telephone? Would you say:'
+    rules:
+    - title: Visual impairment, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 3
+            - equals_number: 4
+            - equals_number: 5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0000505
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Visual impairment
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.7'
+        comment: moderate, extreme difficulty or unable to read print because of eyesight (1-5 ascending;
+          777 screened). broadMatch. PENDING CLINICAL REVIEW.
+        evidence_code: ECO:0006160
+  ObservationVia3:
+    is_a: GatedItem
+    class_uri: b2ai:observation.via3
+    title: 'Because of your eyesight, how much difficulty do you have noticing objects off to the side
+      while you are walking along? Would you say:'
+    rules:
+    - title: Visual field defect, present
+      preconditions:
+        slot_conditions:
+          value:
+            any_of:
+            - equals_number: 3
+            - equals_number: 4
+            - equals_number: 5
+      postconditions:
+        slot_conditions:
+          phenotype:
+            equals_string: HP:0001123
+          status:
+            equals_string: present
+      annotations:
+        predicate_id: skos:broadMatch
+        object_label: Visual field defect
+        mapping_justification: semapv:ManualMappingCuration
+        confidence: '0.65'
+        comment: moderate, extreme difficulty or unable to notice objects off to the side because of eyesight
+          (1-5 ascending; 777 screened). A peripheral-field complaint; broadMatch to Visual field defect.
+          PENDING CLINICAL REVIEW.
+        evidence_code: ECO:0006160

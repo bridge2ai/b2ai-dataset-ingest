@@ -312,7 +312,7 @@ the HPO *term* on each pole, not for the threshold.
 | M2 OMOP long tail | 2 | unmapped count near zero by policy; LOINC tranche done | PR #40: public inventory (0 unmapped of 496), falls / vision / substance use / MoCA, 16 LOINC swaps + 3 corrections |
 | M3 files + device measurements | 3 | packets carry `files[]`; ECG/CGM Measurements | PR #39: `--files`, `--device-summaries`, devices SSSOM |
 | M4 review loop | 4 | one reviewer cycle round-tripped through the sheet | PR #41: `sssom_sheet.py`, `import_omop2obo.py`. **First reviewer cycle pending; gws Sheets scope pending.** |
-| M5 schema | 5 (24–25) | IR in LinkML; spike decision recorded as ADR | `schema/b2ai_ir.yaml` + lockstep test; ADR-0002 amended. **linkml-map spike still open.** |
+| M5 schema | 5 (24–25) | IR in LinkML; spike decision recorded as ADR | PR #42: `schema/b2ai_ir.yaml` + lockstep test. Spike done: the four AI-READI sets are authored as LinkML rules under `schema/gates/` and the SSSOM is generated (`gates_to_sssom.py --check` in CI); ADR-0002 amended. Voice sets not yet migrated. |
 
 Still needing a human: the preflight run against the real release; clinical sign-off on
 the gates marked *pending clinical review* (MoCA, falls, vision, GMI, CES-D-10); the

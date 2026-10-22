@@ -390,3 +390,52 @@ Where the subject fields come from is the reader's business, not the mapping's: 
 AI-READI, `sex` is read from the protected demographics supplement
 (`config/aireadi/supplements/demographics.yaml`) and `age` is derived per observation from
 the cohort age anchor. A dataset that ships neither simply never fires a stratified row.
+
+### Authoring gates in LinkML (the SSSOM is generated)
+
+Since 2026-10-22 the AI-READI sets are not hand-edited TSVs. Each has a LinkML schema under
+`schema/gates/` and the TSV under `mappings/` is rendered from it by
+`scripts/gates_to_sssom.py`; CI runs the same script with `--check`, so the two cannot drift.
+Edit the schema, regenerate, commit both.
+
+One SSSOM subject is one class, with the subject CURIE as its `class_uri` and the subject
+label as its `title`, inheriting the slots of `GatedItem` (`gate_base.yaml`): `value`, `sex`,
+`age`, `phenotype`, `status`. A gate is a standard LinkML `rule` on that class:
+
+```yaml
+MeasurementLbscatHct:
+  is_a: GatedItem
+  class_uri: b2ai:measurement.lbscat_hct
+  rules:
+    - title: Reduced hematocrit, present, sex == "MALE"
+      preconditions:
+        slot_conditions:
+          value: {none_of: [{minimum_value: 42}]}     # when_value  <42
+          sex: {equals_string: MALE}                  # when_subject
+      postconditions:
+        slot_conditions:
+          phenotype: {equals_string: HP:0031851}      # object_id
+          status: {equals_string: present}            # predicate_modifier (excluded = Not)
+      annotations:                                    # the non-executed SSSOM columns
+        predicate_id: skos:relatedMatch
+        object_label: Reduced hematocrit
+        confidence: '0.9'
+        evidence_code: ECO:0007307
+        threshold_source: ABIM Laboratory Test Reference Ranges, January 2025
+```
+
+The gate vocabulary is LinkML's own: `minimum_value` / `maximum_value` for `>=` / `<=`,
+`none_of` of a bound for the exclusive `>` / `<` (LinkML has no exclusive bound), `equals_number`
+/ `equals_string` for equality, `any_of` of `equals_number` for `in {…}`, `equals_string_in` for
+a string set. Constraints on one slot are conjunctive, which is the `&` of the text grammar. A
+stratum is a condition on `sex` or `age` beside the one on `value`. An **ungated** row, a
+term-to-term mapping with no `when_value`, is the class's `exact_mappings` /
+`broad_mappings` / `related_mappings` / … entry, with its label, confidence and comment in a
+class annotation keyed by the object CURIE. The set-level SSSOM header is kept verbatim in
+the schema's `sssom_header` annotation.
+
+The apply path is unchanged: the reader still executes the generated TSV through
+`mapping/conditions.py`, so the shared artefact and the executed artefact are the same file,
+and `validate-mappings` still gates it against the pinned ontology release. A reviewer who
+edits the TSV (the sheet loop) folds it back with `scripts/sssom_to_gates.py`, then
+regenerates. The Voice sets are still hand-edited; migrating them is the same two commands.
