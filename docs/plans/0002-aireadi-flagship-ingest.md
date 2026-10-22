@@ -307,14 +307,18 @@ the HPO *term* on each pole, not for the threshold.
 
 ## Sequencing
 
-| Milestone | Streams | Gate |
-| --- | --- | --- |
-| M0 preflight on the flagship | 0 | counts report; OCT/OCTA/FLIO status known |
-| M1 supplements | 1 (4–6), 5 (23) | sex populated; medications emitted; sex-split gates |
-| M2 OMOP long tail | 2 | unmapped count near zero by policy; LOINC tranche done |
-| M3 files + device measurements | 3 | packets carry `files[]`; ECG/CGM Measurements |
-| M4 review loop | 4 | one reviewer cycle round-tripped through the sheet |
-| M5 schema | 5 (24–25) | IR in LinkML; spike decision recorded as ADR |
+| Milestone | Streams | Gate | Status (2026-10-22) |
+| --- | --- | --- | --- |
+| M0 preflight on the flagship | 0 | counts report; OCT/OCTA/FLIO status known | PR #37: DQD + `--modalities` preflight, size test. **Run on the real release pending (user).** |
+| M1 supplements | 1 (4–6), 5 (23) | sex populated; medications emitted; sex-split gates | PR #38: demographics, medications, `when_subject`, 39 stratified rows |
+| M2 OMOP long tail | 2 | unmapped count near zero by policy; LOINC tranche done | PR #40: public inventory (0 unmapped of 496), falls / vision / substance use / MoCA, 16 LOINC swaps + 3 corrections |
+| M3 files + device measurements | 3 | packets carry `files[]`; ECG/CGM Measurements | PR #39: `--files`, `--device-summaries`, devices SSSOM |
+| M4 review loop | 4 | one reviewer cycle round-tripped through the sheet | PR #41: `sssom_sheet.py`, `import_omop2obo.py`. **First reviewer cycle pending; gws Sheets scope pending.** |
+| M5 schema | 5 (24–25) | IR in LinkML; spike decision recorded as ADR | `schema/b2ai_ir.yaml` + lockstep test; ADR-0002 amended. **linkml-map spike still open.** |
+
+Still needing a human: the preflight run against the real release; clinical sign-off on
+the gates marked *pending clinical review* (MoCA, falls, vision, GMI, CES-D-10); the
+medical-history absent pole; the first review cycle through the sheet.
 
 ## Out of scope
 

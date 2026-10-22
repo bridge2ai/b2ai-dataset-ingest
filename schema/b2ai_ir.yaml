@@ -1,0 +1,205 @@
+id: https://w3id.org/bridge2ai/b2ai-dataset-ingest/ir
+name: b2ai-ir
+title: Bridge2AI dataset-ingest intermediate representation
+description: >-
+  The canonical, target-neutral intermediate representation (IR) that every dataset reader
+  produces and every emitter consumes. One Participant is the unit of one output phenopacket.
+  This schema is the documented, language-neutral form of src/b2ai_dataset_ingest/model/core.py
+  (ADR-0001 anticipated promoting the IR to LinkML; ADR-0002, amended 2026-10-22, records the
+  decision to keep the pydantic classes as the executable model and this schema as their
+  contract). tests/test_ir_schema.py holds the two in lockstep: every pydantic class and field
+  must appear here, and vice versa.
+version: 0.1.0
+license: MIT
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  b2ai_ir: https://w3id.org/bridge2ai/b2ai-dataset-ingest/ir/
+  GA4GH: https://w3id.org/ga4gh/
+default_prefix: b2ai_ir
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  OntologyTerm:
+    description: A CURIE-identified ontology term (MONDO, HP, LOINC, NCIT, UCUM, RxNorm, b2ai).
+    exact_mappings: [GA4GH:OntologyClass]
+    attributes:
+      id:
+        description: CURIE, e.g. 'MONDO:0005180'.
+        identifier: true
+        required: true
+        pattern: '^[A-Za-z][A-Za-z0-9_]*:[^\s]+$'
+      label:
+        description: Human-readable label; the id is authoritative.
+
+  ReferenceRange:
+    description: >-
+      The expected interval for a measured value. Emitted only when BOTH bounds are known:
+      proto3 doubles have no presence, so a one-sided range would read as "39 to 0".
+    exact_mappings: [GA4GH:ReferenceRange]
+    attributes:
+      low: {range: float, required: true}
+      high: {range: float, required: true}
+      unit: {range: OntologyTerm, description: Defaults to the measurement's own unit at emit time.}
+
+  Quantity:
+    description: A numeric value with a unit.
+    exact_mappings: [GA4GH:Quantity]
+    attributes:
+      value: {range: float, required: true}
+      unit: {range: OntologyTerm}
+      reference_range: {range: ReferenceRange}
+
+  TimePoint:
+    description: >-
+      When an observation was made. A reader supplies whichever it has; the phenopacket
+      emitter picks the richest (timestamp > age > ontology_class > session label).
+    close_mappings: [GA4GH:TimeElement]
+    attributes:
+      session_id: {required: true, description: "Source session key, e.g. 'ses-baseline' or 'visit-801'."}
+      timestamp: {description: "ISO-8601 datetime, RFC3339 with a trailing Z."}
+      age_iso8601: {description: "Age at observation as an ISO-8601 duration, e.g. 'P63Y'."}
+      ontology_class: {range: OntologyTerm}
+
+  Individual:
+    description: The subject of a phenopacket.
+    exact_mappings: [GA4GH:Individual]
+    attributes:
+      id: {identifier: true, required: true}
+      sex:
+        description: Phenopacket Sex enum spelling.
+        range: SexEnum
+      gender:
+        range: OntologyTerm
+        description: Gender identity (AI-READI uses the LOINC 76691-5 answer list).
+      age_iso8601: {description: "Age at enrolment / last encounter, ISO-8601 duration."}
+      taxonomy: {range: OntologyTerm, description: Defaults to Homo sapiens at emit time.}
+
+  DiseaseObservation:
+    description: A diagnosis.
+    exact_mappings: [GA4GH:Disease]
+    attributes:
+      term: {range: OntologyTerm, required: true, description: MONDO term.}
+      excluded: {range: boolean, ifabsent: 'false', description: True if explicitly ruled out.}
+      onset: {range: TimePoint}
+
+  ProcedureContext:
+    description: >-
+      How an observation was produced; exists for body_site, the only laterality slot a
+      GA4GH Measurement has.
+    exact_mappings: [GA4GH:Procedure]
+    attributes:
+      code: {range: OntologyTerm, required: true}
+      body_site: {range: OntologyTerm}
+      performed: {range: TimePoint}
+
+  MeasurementObservation:
+    description: A quantitative, ordinal or categorical measurement.
+    exact_mappings: [GA4GH:Measurement]
+    attributes:
+      assay: {range: OntologyTerm, required: true, description: What was measured (LOINC / NCIT / b2ai).}
+      value_quantity: {range: Quantity}
+      value_term: {range: OntologyTerm, description: For a categorical answer expressed as a term.}
+      time: {range: TimePoint}
+      description: {description: Disambiguates two observations sharing one assay.}
+      procedure: {range: ProcedureContext}
+
+  ExternalReference:
+    description: A pointer to an external record, e.g. the source item CURIE on an Evidence.
+    exact_mappings: [GA4GH:ExternalReference]
+    attributes:
+      id: {required: true}
+      reference: {description: Full IRI / URL.}
+      description: {}
+
+  Evidence:
+    description: Why an observation was asserted; the ECO code separates self-report from assay.
+    exact_mappings: [GA4GH:Evidence]
+    attributes:
+      evidence_code: {range: OntologyTerm, required: true}
+      reference: {range: ExternalReference}
+
+  PhenotypicFeatureObservation:
+    description: A present or explicitly absent phenotype (HPO).
+    exact_mappings: [GA4GH:PhenotypicFeature]
+    attributes:
+      type: {range: OntologyTerm, required: true}
+      excluded: {range: boolean, ifabsent: 'false'}
+      severity: {range: OntologyTerm}
+      onset: {range: TimePoint}
+      description: {description: "Human-readable provenance (source item, predicate, gate, stratum)."}
+      evidence: {range: Evidence, multivalued: true}
+
+  TreatmentObservation:
+    description: >-
+      A medication the participant reports taking; a point-in-time statement with no start
+      or end.
+    exact_mappings: [GA4GH:Treatment]
+    attributes:
+      agent: {range: OntologyTerm, required: true, description: "The drug, e.g. 'RxNorm:6809'."}
+      route: {range: OntologyTerm, description: Route of administration (NCIT).}
+      dose: {range: Quantity}
+      frequency: {range: OntologyTerm, description: Schedule frequency (NCIT).}
+      time: {range: TimePoint, description: When the medication list was taken.}
+      description: {}
+
+  FileReference:
+    description: >-
+      A bulk data file the packet links but never embeds (imaging, signals). Raw series enter
+      a packet only this way (docs/plans/0002 step 20).
+    exact_mappings: [GA4GH:File]
+    attributes:
+      uri: {required: true, description: Release-relative unless re-based at emit time.}
+      attributes:
+        description: The File.file_attributes map (datatype, modality, device, laterality, ...).
+        range: FileAttribute
+        multivalued: true
+        inlined: true
+      individual_file_id: {description: The id the file uses for the participant.}
+
+  FileAttribute:
+    description: One key / value of a FileReference's attribute map.
+    attributes:
+      key: {identifier: true, required: true}
+      value: {required: true}
+
+  Participant:
+    description: One participant = the unit of one output phenopacket.
+    close_mappings: [GA4GH:Phenopacket]
+    tree_root: true
+    attributes:
+      individual: {range: Individual, required: true}
+      diseases: {range: DiseaseObservation, multivalued: true}
+      measurements: {range: MeasurementObservation, multivalued: true}
+      phenotypic_features: {range: PhenotypicFeatureObservation, multivalued: true}
+      treatments: {range: TreatmentObservation, multivalued: true}
+      files: {range: FileReference, multivalued: true}
+      source_dataset: {description: "e.g. 'bridge2ai-aireadi', recorded in output metadata."}
+      audio_references:
+        description: Voice audio / derived-feature URIs (referenced, not ingested).
+        multivalued: true
+      cohort:
+        description: >-
+          Study-design attributes (arm, site, split) as provenance; never emitted as a
+          Disease.
+        range: CohortAttribute
+        multivalued: true
+        inlined: true
+
+  CohortAttribute:
+    description: One key / value of a Participant's cohort map.
+    attributes:
+      key: {identifier: true, required: true}
+      value: {required: true}
+
+enums:
+  SexEnum:
+    description: The phenopacket Sex enum.
+    permissible_values:
+      UNKNOWN_SEX: {}
+      FEMALE: {}
+      MALE: {}
+      OTHER_SEX: {}
