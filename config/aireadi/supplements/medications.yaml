@@ -28,7 +28,7 @@
 # inhalation) use UCUM's {annotation} form. "Other" (18) is unmapped. The amount (`cmdos`)
 # is free text; a non-numeric amount is counted and the treatment keeps its agent.
 table: medications
-file: "supplements/*edications*.csv"       # glob relative to the release root; see --supplements-dir
+file: "supplements/*edications*"       # glob relative to the release root (csv/tsv/xlsx); see --supplements-dir
 id_column: studyid
 produces: TreatmentObservation
 description: "Self-reported current medication at the study visit (AI-READI current_medications form)"

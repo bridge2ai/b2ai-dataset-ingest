@@ -44,6 +44,10 @@ logger = logging.getLogger(__name__)
 #: answer, not a value, and recode to nothing.
 DECLINED = frozenset({"777", "888", "999", "777.0", "888.0", "999.0"})
 
+#: What a supplement file may be. The config globs carry no extension, so a column list or
+#: a README sitting beside the real sheet (``columns_from_*.txt``) is never picked up.
+SUPPORTED_SUFFIXES = frozenset({".csv", ".tsv", ".xlsx", ".xlsm"})
+
 
 # -- locating and reading a supplement -----------------------------------------------
 def resolve_supplement(
@@ -64,7 +68,7 @@ def resolve_supplement(
         matches = sorted(base.glob(pattern.lstrip("/"))) if "*" in pattern else [Path(pattern)]
     else:
         matches = sorted(root.glob(pattern))
-    matches = [m for m in matches if m.is_file()]
+    matches = [m for m in matches if m.is_file() and m.suffix.lower() in SUPPORTED_SUFFIXES]
     if len(matches) > 1:
         logger.warning(
             "supplement pattern %r matches %d files; using the first", pattern, len(matches)
@@ -80,8 +84,8 @@ def stream_table(path: Path) -> Iterator[dict[str, str]]:
     (``6`` and ``6.0``) land on the same config key.
     """
     suffix = path.suffix.lower()
-    if suffix in (".csv", ".tsv", ".txt"):
-        delimiter = "\t" if suffix in (".tsv", ".txt") else ","
+    if suffix in (".csv", ".tsv"):
+        delimiter = "\t" if suffix == ".tsv" else ","
         with open(path, newline="", encoding="utf-8-sig") as fh:
             yield from csv.DictReader(fh, delimiter=delimiter)
         return

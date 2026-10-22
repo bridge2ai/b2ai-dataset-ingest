@@ -35,7 +35,7 @@
 # A declined answer (777 / 888 on a coded column) recodes to nothing and is counted per
 # column on the report, so a supplement that is mostly "prefer not to say" is visible.
 table: demographics
-file: "supplements/*emographics*.csv"      # glob relative to the release root; see --supplements-dir
+file: "supplements/*emographics*"      # glob relative to the release root (csv/tsv/xlsx); see --supplements-dir
 id_column: studyid
 produces: Individual
 columns:
