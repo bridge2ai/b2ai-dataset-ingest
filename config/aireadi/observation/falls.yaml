@@ -1,0 +1,34 @@
+# Mapping: AI-READI clinical_data/observation.csv, falls -> MeasurementObservation (IR)
+#
+# Two health-survey items that share the `mhoccur_` prefix with the medical-history grid
+# but are NOT condition checkboxes: a 12-month recall of falls and the count. They were
+# dropped in v1 only because the terms were uncurated; scope.yaml's `mhoccur_fall*` rule is
+# gone and this file replaces it.
+#
+# SOURCE. Item keys, labels and answer coding from AI-READI's published crosswalk
+# (ai-readi-docs mappings.json, CC-BY-4.0). LOINC codes verified by exact-code lookup against
+# the NLM Clinical Table LOINC service, 2026-10-22:
+#   52552-7  Falls in the past year                             (crosswalk: closeMatch)
+#   75856-5  Number of falls in the past 12 months [Reported]   (crosswalk gives SNOMED
+#            391002003; the LOINC code names the reported count exactly)
+#
+# ANSWERS. mhoccur_fall is 1 Yes / 0 No / 777 Prefer not to say (the sentinel is screened).
+# mhoccur_fallot is a free count, asked only if mhoccur_fall = 1.
+#
+# HPO: mappings/b2ai-aireadi-observation.sssom.tsv gates mhoccur_fall == 1 -> Falls and
+# mhoccur_fallot >= 2 (bounded <= 365) -> Frequent falls, self-report evidence, presence only.
+table: observation
+delimiter: ","
+id_column: person_id
+key_column: observation_source_value
+date_column: observation_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+measures:
+  mhoccur_fall:
+    assay: { id: "LOINC:52552-7", label: "Falls in the past year" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  mhoccur_fallot:
+    assay: { id: "LOINC:75856-5", label: "Number of falls in the past 12 months [Reported]" }
+    unit: { id: "UCUM:{#}", label: "count" }

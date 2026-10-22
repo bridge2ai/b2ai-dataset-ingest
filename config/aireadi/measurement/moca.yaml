@@ -1,0 +1,30 @@
+# Mapping: AI-READI clinical_data/measurement.csv, MoCA -> MeasurementObservation (IR)
+#
+# The Montreal Cognitive Assessment, administered on a tablet (MoCA Duo app). Its total and
+# sub-item scores land in measurement.csv under comma-less item keys (`moca_total_score`,
+# `naming`, `digitspan`, ...). This file ships the TOTAL; the sub-items stay unmapped until
+# the MoCA data dictionary in AI-READI/DataElementMaps is walked item by item (the published
+# crosswalk JSON carries only the MoCA completion date), and they are listed in
+# config/aireadi/inventory.tsv as such.
+#
+# LOINC 72172-0 "Total score [MoCA]" verified by exact-code lookup against the NLM Clinical
+# Table LOINC service, 2026-10-22.
+#
+# NO REFERENCE RANGE. The row's range_low/range_high (0-30) is the instrument's SCORING range,
+# not a reference interval, so `reference_ranges` stays off (see labs.yaml for the contrast).
+#
+# HPO: mappings/b2ai-aireadi-measurement.sssom.tsv gates the total at the instrument's
+# published cut-off (< 26, Nasreddine et al. 2005) for Cognitive impairment, present pole
+# only and PENDING CLINICAL REVIEW -- the cut-off has known education and age effects, and
+# a normal score at one visit does not rule impairment out.
+table: measurement
+delimiter: ","
+id_column: person_id
+key_column: measurement_source_value
+date_column: measurement_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+measures:
+  moca_total_score:
+    assay: { id: "LOINC:72172-0", label: "Total score [MoCA]" }
+    unit: { id: "UCUM:{score}", label: "score" }

@@ -391,5 +391,9 @@ def test_only_ingested_observation_items_carry_a_gate():
     from b2ai_dataset_ingest.mapping.hpo_rules import load_conditional_rules
 
     gated = set(load_conditional_rules(dataset="aireadi").get("observation", {}))
-    ingested = set(load_mapping(CONFIG_DIR / "observation" / "cesd10.yaml")["measures"])
+    ingested: set[str] = set()
+    for path in (CONFIG_DIR / "observation").glob("*.yaml"):
+        ingested |= set(load_mapping(path).get("measures") or {})
     assert gated and gated <= ingested
+    # ...and the medical-history grid stays term-to-term only, pending the absent-pole review.
+    assert not any(item.startswith(("mhoccur_h", "mhterm_", "mh_")) for item in gated)
