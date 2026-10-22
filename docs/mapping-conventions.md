@@ -309,11 +309,14 @@ fact: the subject is an **assay**, not a symptom item, and the phenotype is enta
 
 Four rules of thumb that recur in that file:
 
-1. **Sex-blind gates.** `Individual.sex` is redacted in the public release. For a sex-split
-   interval the present pole fires only where the value is abnormal for *both* sexes and the
-   absent pole only where it is normal for both; the band between asserts nothing. Age-stratified
-   tables (alkaline phosphatase, NT-proBNP) collapse the same way to their adult extremes.
-   Tighten per sex when sex ships — every such row says so.
+1. **Sex-blind gates, with stratified rows beside them.** `Individual.sex` is redacted in the
+   public release. For a sex-split interval the *unconditioned* row fires the present pole
+   only where the value is abnormal for *both* sexes and the absent pole only where it is
+   normal for both; the band between asserts nothing. Age-stratified tables (alkaline
+   phosphatase, NT-proBNP) collapse the same way to their adult extremes. Since 2026-10-22
+   the protected demographics supplement carries sex, and each sex-split interval *also*
+   ships per-sex rows carrying a `when_subject` (see "Stratified (`when_subject`) mappings"
+   below). The unconditioned row stays as the fallback for an unknown sex.
 2. **A silent band is deliberate.** Between the present and absent cut-points (AHA "Elevated"
    120–129 systolic, NCEP "borderline-high", ADA prediabetes 5.7–6.0 % against a lab interval to
    6.0) neither pole fires. Widening either pole to close the band would assert something one of
@@ -336,9 +339,10 @@ to write into a gate, and a platelet count of 555 is a real thrombocytosis. The 
 requirement therefore applies to self-report rows only.
 
 Declare `when_value` once in the file's SSSOM `extension_definitions` metadata; one
-`subject_id`/`predicate_id`/`predicate_modifier`/`object_id` combination carries at most one
-row, and a repeat is a duplicate however its `when_value` differs (so a measured-value assay
-has at most one present row and one absent row per term). Each derived feature is
+`subject_id`/`predicate_id`/`predicate_modifier`/`object_id`/`when_subject` combination
+carries at most one row, and a repeat is a duplicate however its `when_value` differs (so
+a measured-value assay has at most one present row and one absent row per term *per
+stratum*). Each derived feature is
 stamped with provenance: a human-readable `description` and a GA4GH `Evidence` whose
 `evidenceCode` is `ECO:0006160` ("self-reported patient statement … in automatic assertion") with
 an `ExternalReference` back to the source item — self-report-derived phenotypes stay
@@ -349,3 +353,38 @@ curator judgment (see the `curation-assist` skill). The apply path lives in
 runs it during questionnaire ingestion. Note the reference `sssom-py` parser **drops**
 `when_value` on load, so the pipeline reads mappings with the column-preserving `parse_sssom`
 in `mapping/sssom_io.py`.
+
+### Stratified (`when_subject`) mappings
+
+A reference interval that depends on who the participant is — hematocrit 37–47 % for a
+woman and 42–50 % for a man, ALT 10–64 IU/L for a man under 50 and 10–48 from 50 — cannot be
+written as one `when_value`, because the gate cannot see `Individual.sex` or the age at the
+observation. The `when_subject` extension column is the stratification layer: a row carries
+the same `when_value` shape as any gated row plus a condition on the **subject**, and fires
+only for a participant the condition matches.
+
+- **Grammar.** `&`-separated `<field> <op> <operand>` terms over the closed field set
+  `sex` (the phenopacket enum spelling: `FEMALE`, `MALE`, `OTHER_SEX`) and `age` (whole
+  years at the observation): `sex == "FEMALE"`, `sex == "MALE" & age >= 50`. Operators and
+  operands are the `when_value` grammar, evaluated by the same code
+  (`mapping/conditions.py`, `parse_subject_condition`).
+- **Unknown never matches.** A row whose condition names a field the participant has no
+  value for does not fire — a declined or redacted sex must never satisfy a female-only
+  gate. That is also why the sex-blind row stays in the file: it is the fallback for an
+  unknown sex, not a duplicate.
+- **Both may fire, and agree.** For a known sex the unconditioned sex-blind row and the
+  matching per-sex row are both evaluated. They cannot contradict, because the sex-blind
+  band is by construction the intersection of the per-sex bands; the reader keeps one
+  feature per term and time (`_reconcile`).
+- **A stratum only qualifies a gate.** `when_subject` on a row with no `when_value` is an
+  error (`unconditioned-subject`): a term-to-term mapping is not "about" one sex.
+- **Identity.** The stratum is part of a row's identity for the duplicate check, the gate is
+  not: one `(subject, predicate, modifier, object, when_subject)` carries one row.
+- **Provenance.** A feature derived through a stratified row says so in its description
+  (`… when value <37 for sex == "FEMALE" …`), so a consumer can tell a sex-specific call
+  from a sex-blind one.
+
+Where the subject fields come from is the reader's business, not the mapping's: for
+AI-READI, `sex` is read from the protected demographics supplement
+(`config/aireadi/supplements/demographics.yaml`) and `age` is derived per observation from
+the cohort age anchor. A dataset that ships neither simply never fires a stratified row.

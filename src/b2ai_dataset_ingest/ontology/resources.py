@@ -86,6 +86,17 @@ KNOWN_RESOURCES: dict[str, dict[str, str]] = {
         "namespace_prefix": "UCUM",
         "iri_prefix": "https://ucum.org/",
     },
+    "RXNORM": {
+        # The AI-READI medications supplement codes each drug with a BioPortal RxNorm CUI.
+        # RxNorm is a legitimate OntologyClass source for Treatment.agent; the CUI is used as
+        # the source gives it (clinical drug or ingredient level), with no re-mapping.
+        "id": "rxnorm",
+        "name": "RxNorm",
+        "url": "https://www.nlm.nih.gov/research/umls/rxnorm/",
+        "version": "2026-10-06",
+        "namespace_prefix": "RxNorm",
+        "iri_prefix": "https://purl.bioontology.org/ontology/RXNORM/",
+    },
     "B2AI": {
         "id": "b2ai",
         "name": "Bridge2AI project-local codes (b2ai-dataset-ingest)",

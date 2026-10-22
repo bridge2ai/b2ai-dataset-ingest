@@ -227,6 +227,15 @@ def aireadi(
         Path("config/aireadi"), "--config", "-c", help="Mapping config dir."
     ),
     target: str = typer.Option("phenopacket", "--target", "-t", help="Output target."),
+    supplements_dir: Path = typer.Option(
+        None,
+        "--supplements-dir",
+        help=(
+            "Directory holding the protected supplements (demographics, medications) when "
+            "they are staged outside the release tree. Default: the file globs in "
+            "config/aireadi/supplements/*.yaml, resolved under --input."
+        ),
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log per-table warnings."),
 ) -> None:
     """Ingest the Bridge2AI AI-READI dataset (OMOP CDM) into one phenopacket per participant."""
@@ -245,7 +254,7 @@ def aireadi(
         typer.echo(f"target {target!r} is not implemented yet", err=True)
         raise typer.Exit(code=2)
 
-    source = AireadiSource(root=input, config_dir=config)
+    source = AireadiSource(root=input, config_dir=config, supplements_dir=supplements_dir)
     # The generator is handed straight to the emitter: OMOP tables are large (the synthetic
     # measurement table is 768k rows) and write_all holds nothing.
     written = PhenopacketEmitter().write_all(source.read(), output)
@@ -278,6 +287,11 @@ def validate_aireadi_cmd(
             "datatype, and which documented datatypes the delivery lacks. Counts only."
         ),
     ),
+    supplements_dir: Path = typer.Option(
+        None,
+        "--supplements-dir",
+        help="Directory holding the protected supplements, if staged outside --input.",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log details."),
 ) -> None:
     """Preflight-check the AI-READI OMOP layout against its configs.
@@ -293,7 +307,11 @@ def validate_aireadi_cmd(
         format="%(levelname)s %(name)s: %(message)s",
     )
     report = validate_aireadi(
-        root=input, config_dir=config, strict_coverage=strict_coverage, modalities=modalities
+        root=input,
+        config_dir=config,
+        strict_coverage=strict_coverage,
+        modalities=modalities,
+        supplements_dir=supplements_dir,
     )
     typer.echo(report.render())
     if report.errors:

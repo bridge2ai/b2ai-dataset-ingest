@@ -32,6 +32,11 @@ b2ai-ingest = "b2ai_dataset_ingest.cli:app"
 validation = [
     "oaklib>=0.7.2",
 ]
+# Reading the protected AI-READI supplements (demographics, medications) as the .xlsx
+# they are delivered in. CSV/TSV exports need nothing.
+supplements = [
+    "openpyxl>=3.1",
+]
 analysis = [
     "matplotlib>=3.8",
     "pandas>=2.0",
