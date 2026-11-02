@@ -101,6 +101,36 @@ report and are not yet independently checked (its branch is not in this repo).
 > feature is the row's `evidence_code`, so a lab-derived phenotype is never mistaken for
 > self-report. See `docs/mapping-conventions.md`, "Measured-value (reference-range) mappings".
 
+> **Amended 2026-10-22 (stratified gates, and the LinkML question in #35).** Three things
+> the AI-READI flagship work settled (docs/plans/0002, streams 1 and 5):
+>
+> - **Stratification lives in a second extension column, `when_subject`**, not in a richer
+>   `when_value` grammar and not in LinkML. A reference interval that differs by sex or age
+>   is written as one row per stratum (`sex == "FEMALE"`, `sex == "MALE" & age >= 50`),
+>   each carrying the same `when_value` shape. The field set is closed (`sex`, `age`); a row
+>   whose stratum names a field the participant has no value for never fires; and when at
+>   least one stratified row matches, the unconditioned rows for that item are not
+>   evaluated — they are the fallback for a subject no stratum covers. The stratum is part
+>   of a row's identity for the duplicate check. This covers the sex- and age-split
+>   intervals #35 listed; ratios across items (ACR, sites felt ÷ tested) and paired
+>   readings remain reader-side, as before.
+> - **Decision 2 stands: execute in the pipeline.** The `ast.Num` crash is Python 3.14-only
+>   (#35 is right that 3.12 works), but that was never the main reason: `linkml-map` is
+>   still pre-1.0 (0.5.4, 2026-08-26), and a gate that references the subject's sex needs a
+>   join the mapping language would have to be taught. The grammar in
+>   `mapping/conditions.py` stays the executable definition. A time-boxed spike —
+>   author the measurement gates as LinkML `rules` / `linkml-map` and regenerate the SSSOM —
+>   is the remaining open item, and the acceptance test is that the regenerated SSSOM
+>   round-trips through `validate-mappings` unchanged.
+> - **The IR has a LinkML schema, as a contract rather than as the executable model.**
+>   `schema/b2ai_ir.yaml` is the documented form of `model/core.py`; `tests/test_ir_schema.py`
+>   keeps the two in lockstep (every class, field and required flag), with a `SchemaView`
+>   load when `linkml-runtime` is installed (the `schema` extra). Validating emitted
+>   packets against `cmungall/linkml-phenopackets` is **not** adopted: the project is
+>   experimental, last touched 2024-07, and generated from the same protobuf our packets
+>   already round-trip through; it would be a check on the generator, not on us. Revisit if
+>   it starts tracking releases.
+
 ## Worked example — `b2ai:phq9.feeling_depressed` → HP:5200273 Pathological sadness
 
 Two SSSOM rows (the `when_value` extension column is declared in `extension_definitions`):
