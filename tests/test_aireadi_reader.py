@@ -143,7 +143,7 @@ def test_laterality_comes_from_config_including_the_unqualified_item(participant
     assert right.procedure.body_site.id == "UBERON:0004549"
     assert left.procedure.body_site.id == "UBERON:0004548"
     # viaodsph carries NO qualifier column value at all, yet must still be sided.
-    sphere = _by_assay(participants["900001"], "b2ai:measurement.viaodsph")[0]
+    sphere = _by_assay(participants["900001"], "LOINC:28687-2")[0]
     assert sphere.procedure.body_site.id == "UBERON:0004549"
 
 

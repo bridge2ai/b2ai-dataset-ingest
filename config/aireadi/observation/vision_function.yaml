@@ -1,0 +1,44 @@
+# Mapping: AI-READI clinical_data/observation.csv, ophthalmic survey -> MeasurementObservation
+#
+# The vision-function and eye-care-access questionnaire (`via1`..`via6`). Three items are
+# self-reported functional difficulty on a five-point scale and carry HPO gates; two are
+# eye-care access (time since last exam) and are emitted as ordinal Measurements only.
+#
+# SOURCE. Item keys, labels and answer coding from AI-READI's published crosswalk
+# (ai-readi-docs mappings.json, CC-BY-4.0). LOINC verified by exact-code lookup against the
+# NLM Clinical Table LOINC service, 2026-10-22:
+#   66082-9  Level of difficulty seeing objects off to the side  (via3; crosswalk closeMatch)
+#   55400-6  Date of last eye examination                        (via4; crosswalk closeMatch --
+#            the item is a recall CATEGORY, not a date, so it ships a project-local id instead)
+# via1, via2, via6 have AI-READI-local concepts and no public code -> project-local ids.
+#
+# THE SCALE (via1-3): 1 No difficulty | 2 A little | 3 Moderate | 4 Extreme | 5 Unable to do
+# because of eyesight | 777 Prefer not to say (screened). Ascending with difficulty, so a
+# `in {3,4,5}` gate reads "moderate or worse".
+#
+# NOT MAPPED: via5 ("why have you not seen an eye care professional" -- a check-all-that-apply
+# of barriers, which REDCap stores as one row per choice; access, not phenotype). Listed in
+# scope.yaml.
+table: observation
+delimiter: ","
+id_column: person_id
+key_column: observation_source_value
+date_column: observation_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+measures:
+  via1:
+    assay: { id: "b2ai:observation.via1", label: "Difficulty recognizing a friend across the street because of eyesight" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  via2:
+    assay: { id: "b2ai:observation.via2", label: "Difficulty reading print because of eyesight" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  via3:
+    assay: { id: "LOINC:66082-9", label: "Level of difficulty seeing objects off to the side" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  via4:
+    assay: { id: "b2ai:observation.via4", label: "Time since last eye examination by an eye care provider (category)" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  via6:
+    assay: { id: "b2ai:observation.via6", label: "Time since last dilated eye examination (category)" }
+    unit: { id: "UCUM:{score}", label: "score" }

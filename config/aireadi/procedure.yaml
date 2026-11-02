@@ -1,0 +1,17 @@
+# Policy: AI-READI clinical_data/procedure_occurrence.csv is NOT ingested.
+#
+# This file carries no mapping. It exists so the decision is written where the inventory
+# (config/aireadi/inventory.tsv, scripts/build_aireadi_inventory.py) can read it, rather
+# than inferred from an absence.
+#
+# The table holds 22 monofilament rows per participant -- ten sites per foot plus two
+# "foot tested" flags -- and every one records only that a site WAS TESTED. None carries a
+# result. The finding, the count of sites felt per foot, lives in measurement.csv as
+# mssrffl / msslffl and is ingested by measurement/monofilament.yaml. Ingesting this table
+# would emit twenty MedicalActions per participant asserting that a test happened, with the
+# finding stored elsewhere: more output, no more information. Revisit only if a release
+# starts carrying per-site results (docs/design/aireadi-ingest.md, "Non-goals").
+table: procedure_occurrence
+drop_rules:
+  "mss*": "Monofilament per-site 'tested' flag; the per-foot count of sites felt is the finding
+    and is ingested from measurement.csv (measurement/monofilament.yaml)."

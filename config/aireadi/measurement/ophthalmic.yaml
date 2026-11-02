@@ -1,3 +1,6 @@
+# LOINC TRANCHE (2026-10-22): the assay ids below that were project-local now carry LOINC codes
+# verified by exact-code lookup against the NLM Clinical Table LOINC service, with the
+# LONG_COMMON_NAME as label. SSSOM subjects are unaffected (they key on the item, not the assay).
 # Mapping: AI-READI clinical_data/measurement.csv, per-eye ophthalmic items
 #          -> MeasurementObservation (IR)
 #
@@ -149,32 +152,42 @@ measures:
   # -- autorefraction. Per-eye by NAME only: the published crosswalk records no qualifier
   #    for any of these six, which is exactly why body_site is declared here.
   viaodsph:
-    assay: { id: "b2ai:measurement.viaodsph", label: "Autorefraction sphere, right eye" }
+    assay: { id: "LOINC:28687-2", label: "Right eye Sphere Autorefractor.auto" }
     unit: { id: "UCUM:[diop]", label: "diopter" }
     procedure_code: { id: "NCIT:C176330", label: "Autorefraction" }
     body_site: { id: "UBERON:0004549", label: "right eye" }
   viaossph:
-    assay: { id: "b2ai:measurement.viaossph", label: "Autorefraction sphere, left eye" }
+    assay: { id: "LOINC:28691-4", label: "Left eye Sphere Autorefractor.auto" }
     unit: { id: "UCUM:[diop]", label: "diopter" }
     procedure_code: { id: "NCIT:C176330", label: "Autorefraction" }
     body_site: { id: "UBERON:0004548", label: "left eye" }
   viaodcyl:
-    assay: { id: "b2ai:measurement.viaodcyl", label: "Autorefraction cylinder, right eye" }
+    assay: { id: "LOINC:28688-0", label: "Right eye Cylinder Autorefractor.auto" }
     unit: { id: "UCUM:[diop]", label: "diopter" }
     procedure_code: { id: "NCIT:C176330", label: "Autorefraction" }
     body_site: { id: "UBERON:0004549", label: "right eye" }
   viaoscyl:
-    assay: { id: "b2ai:measurement.viaoscyl", label: "Autorefraction cylinder, left eye" }
+    assay: { id: "LOINC:28692-2", label: "Left eye Cylinder Autorefractor.auto" }
     unit: { id: "UCUM:[diop]", label: "diopter" }
     procedure_code: { id: "NCIT:C176330", label: "Autorefraction" }
     body_site: { id: "UBERON:0004548", label: "left eye" }
   viaodaxi:
-    assay: { id: "b2ai:measurement.viaodaxi", label: "Autorefraction axis, right eye" }
+    assay: { id: "LOINC:28689-8", label: "Right eye Axis Autorefractor.auto" }
     unit: { id: "UCUM:deg", label: "degree" }
     procedure_code: { id: "NCIT:C176330", label: "Autorefraction" }
     body_site: { id: "UBERON:0004549", label: "right eye" }
   viaosaxi:
-    assay: { id: "b2ai:measurement.viaosaxi", label: "Autorefraction axis, left eye" }
+    assay: { id: "LOINC:28693-0", label: "Left eye Axis Autorefractor.auto" }
     unit: { id: "UCUM:deg", label: "degree" }
     procedure_code: { id: "NCIT:C176330", label: "Autorefraction" }
     body_site: { id: "UBERON:0004548", label: "left eye" }
+
+# Present in the published crosswalk for the BCVA form but NOT measurements: two "not done"
+# flags, two sign modifiers for the autorefraction sphere, and the form-completion method.
+# Named here so the inventory (config/aireadi/inventory.tsv) records them as a decision.
+drop_rules:
+  "viaod_nd": "BCVA not done, right eye: an administrative flag, not a measurement."
+  "viaos_nd": "BCVA not done, left eye: an administrative flag, not a measurement."
+  "viaodsph_m": "Sign (+/-) modifier for the right-eye sphere; the signed value is in viaodsph."
+  "viaossph_m": "Sign (+/-) modifier for the left-eye sphere; the signed value is in viaossph."
+  "viaomthd": "Method used to complete the BCVA form (EVA / ETDRS): acquisition provenance."
