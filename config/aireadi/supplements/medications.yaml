@@ -1,0 +1,94 @@
+# Mapping: AI-READI protected medications supplement -> TreatmentObservation (IR)
+#
+# The REDCap `current_medications` repeat instrument, one row per participant x medication,
+# delivered under the controlled tier. The published OMOP release has no drug_exposure
+# table, so this is the only medication source. OPTIONAL: absent, nothing changes.
+#
+# SOURCE. Column names, the coded answer lists and the BioPortal RxNorm annotation come
+# from the protected data dictionary (sheet "Projected - Medications"). Of the rows in the
+# wave-4 delivery, 91% carry an rxnorm_code (structural count; no value was read).
+#
+# THE AGENT IS THE SOURCE'S RxNorm CODE, used as given. RxNorm is a legitimate
+# OntologyClass source for Treatment.agent; the CUI may be at ingredient or clinical-drug
+# level, whichever BioPortal annotated. Re-mapping to ingredient (RxNav) or to ChEBI
+# (OMOP2OBO drug mappings) is a later, additive step.
+#
+# A ROW WITH NO rxnorm_code IS COUNTED AND DROPPED. Its only other identification is
+# `cmname`, free text, which is Data under DLA §3.C: this pipeline never reads it, and no
+# model normalises it. The fix for those rows is upstream (complete the BioPortal coding)
+# or a curator working inside the DUA boundary.
+#
+# ROUTE and FREQUENCY are closed REDCap code lists -> NCIT. Every code below was found by
+# exact-label search on EBI OLS4 (ontology=ncit, exact=true) on 2026-10-22 and is the
+# single hit for its label. "Other" (888) and "Unknown" (UNK) recode to nothing; the
+# `cmrouteot` free-text companion is never read. "Once" (ONCE) has no exact NCIT label and
+# is left unmapped (placeholder), counted on the report.
+#
+# DOSE UNIT is the REDCap code list -> UCUM. Counted units (capsule, tablet, puff, spray,
+# inhalation) use UCUM's {annotation} form. "Other" (18) is unmapped. The amount (`cmdos`)
+# is free text; a non-numeric amount is counted and the treatment keeps its agent.
+table: medications
+file: "supplements/*edications*.csv"       # glob relative to the release root; see --supplements-dir
+id_column: studyid
+produces: TreatmentObservation
+description: "Self-reported current medication at the study visit (AI-READI current_medications form)"
+agent:
+  code_column: rxnorm_code
+  label_column: rxnorm_term
+  prefix: RxNorm
+route:
+  column: cmroute
+  value_terms:
+    "1":  { id: "NCIT:C38250", label: "Intralesional Route of Administration" }
+    "2":  { id: "NCIT:C28161", label: "Intramuscular Route of Administration" }
+    "3":  { id: "NCIT:C38255", label: "Intraocular Route of Administration" }
+    "4":  { id: "NCIT:C38258", label: "Intraperitoneal Route of Administration" }
+    "5":  { id: "NCIT:C38284", label: "Nasal Route of Administration" }
+    "6":  { id: "NCIT:C38288", label: "Oral Route of Administration" }
+    "7":  { id: "NCIT:C38295", label: "Rectal Route of Administration" }
+    "8":  { id: "NCIT:C38216", label: "Inhalation Route of Administration" }
+    "9":  { id: "NCIT:C38299", label: "Subcutaneous Route of Administration" }
+    "10": { id: "NCIT:C38304", label: "Topical Route of Administration" }
+    "11": { id: "NCIT:C38305", label: "Transdermal Route of Administration" }
+    "12": { id: "NCIT:C38313", label: "Vaginal Route of Administration" }
+frequency:
+  column: cmdosfrq
+  value_terms:
+    ONCE: { id: "TODO", label: "TODO" }     # no exact NCIT label for a single administration
+    PRN:  { id: "NCIT:C64499", label: "As Needed" }
+    QD:   { id: "NCIT:C25473", label: "Daily" }
+    BID:  { id: "NCIT:C64496", label: "Twice Daily" }
+    TID:  { id: "NCIT:C64527", label: "Three Times Daily" }
+    QID:  { id: "NCIT:C64530", label: "Four Times Daily" }
+    QOD:  { id: "NCIT:C64525", label: "Every Other Day" }
+    QW:   { id: "NCIT:C67069", label: "Weekly" }
+    QM:   { id: "NCIT:C64498", label: "Monthly" }
+    UNK:  null
+dose:
+  amount_column: cmdos
+  unit_column: cmdosu
+  units:
+    "1":  { id: "UCUM:%", label: "percent volume per volume" }
+    "2":  { id: "UCUM:{capsule}", label: "capsule" }
+    "3":  { id: "UCUM:g", label: "gram" }
+    "4":  { id: "UCUM:{inhalation}", label: "inhalation" }
+    "5":  { id: "UCUM:[IU]", label: "international unit" }
+    "6":  { id: "UCUM:L/h", label: "liter per hour" }
+    "7":  { id: "UCUM:L/min", label: "liter per minute" }
+    "8":  { id: "UCUM:mg", label: "milligram" }
+    "9":  { id: "UCUM:mg/kg", label: "milligram per kilogram" }
+    "10": { id: "UCUM:mL", label: "milliliter" }
+    "11": { id: "UCUM:mL/h", label: "milliliter per hour" }
+    "12": { id: "UCUM:mL/kg", label: "milliliter per kilogram" }
+    "13": { id: "UCUM:{puff}", label: "puff" }
+    "14": { id: "UCUM:{spray}", label: "spray" }
+    "15": { id: "UCUM:{tablet}", label: "tablet" }
+    "16": { id: "UCUM:ug", label: "microgram" }
+    "17": { id: "UCUM:ug/kg", label: "microgram per kilogram" }
+    "19": { id: "UCUM:mg/g", label: "milligram per gram" }
+    "20": { id: "UCUM:mg/mL", label: "milligram per milliliter" }
+dropped_columns:
+  cmname: "Free-text medication name. Data under DLA §3.C; never read. The agent is rxnorm_code."
+  cmrouteot: "Free-text route for cmroute=888; never read."
+  redcap_repeat_instrument: "REDCap housekeeping (always current_medications)."
+  redcap_repeat_instance: "REDCap row number within the participant; the packet keeps list order."

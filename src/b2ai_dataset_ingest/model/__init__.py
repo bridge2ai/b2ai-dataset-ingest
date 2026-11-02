@@ -11,6 +11,7 @@ from b2ai_dataset_ingest.model.core import (
     DiseaseObservation,
     Evidence,
     ExternalReference,
+    FileReference,
     Individual,
     MeasurementObservation,
     OntologyTerm,
@@ -20,9 +21,12 @@ from b2ai_dataset_ingest.model.core import (
     Quantity,
     ReferenceRange,
     TimePoint,
+    TreatmentObservation,
 )
 
 __all__ = [
+    "FileReference",
+    "TreatmentObservation",
     "DiseaseObservation",
     "Evidence",
     "ExternalReference",

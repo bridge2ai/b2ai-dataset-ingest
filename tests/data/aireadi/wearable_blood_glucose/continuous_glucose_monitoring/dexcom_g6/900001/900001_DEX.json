@@ -1,0 +1,28 @@
+{
+  "header": {
+    "uuid": "AIREADI-900001",
+    "creation_date_time": "2024-01-16T08:00:00Z",
+    "patient_id": "AIREADI-900001",
+    "schema_id": {"namespace": "omh", "name": "blood-glucose", "version": 3.0},
+    "modality": "sensed",
+    "acquisition_rate": {"number_of_times": 1, "time_window": {"value": 5, "unit": "min"}},
+    "external_datasheets": {"datasheet_type": "source_device", "datasheet_reference": "iri-of-cgm-device"},
+    "timezone": "PST"
+  },
+  "body": {
+    "cgm": [
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:00:00Z", "end_date_time": "2024-01-16T08:00:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 60}, "transmitter_time": {"unit": "long integer", "value": 1}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:05:00Z", "end_date_time": "2024-01-16T08:05:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 100}, "transmitter_time": {"unit": "long integer", "value": 2}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:10:00Z", "end_date_time": "2024-01-16T08:10:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 120}, "transmitter_time": {"unit": "long integer", "value": 3}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:15:00Z", "end_date_time": "2024-01-16T08:15:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 140}, "transmitter_time": {"unit": "long integer", "value": 4}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:20:00Z", "end_date_time": "2024-01-16T08:20:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 160}, "transmitter_time": {"unit": "long integer", "value": 5}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:25:00Z", "end_date_time": "2024-01-16T08:25:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 180}, "transmitter_time": {"unit": "long integer", "value": 6}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:30:00Z", "end_date_time": "2024-01-16T08:30:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 200}, "transmitter_time": {"unit": "long integer", "value": 7}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:35:00Z", "end_date_time": "2024-01-16T08:35:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 220}, "transmitter_time": {"unit": "long integer", "value": 8}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:40:00Z", "end_date_time": "2024-01-16T08:40:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 260}, "transmitter_time": {"unit": "long integer", "value": 9}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:45:00Z", "end_date_time": "2024-01-16T08:45:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 300}, "transmitter_time": {"unit": "long integer", "value": 10}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:50:00Z", "end_date_time": "2024-01-16T08:50:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": 150}, "transmitter_time": {"unit": "long integer", "value": 11}, "transmitter_id": "FIXTURE"},
+      {"effective_time_frame": {"time_interval": {"start_date_time": "2024-01-16T08:55:00Z", "end_date_time": "2024-01-16T08:55:00Z"}}, "event_type": "EGV", "source_device_id": "FIXTURE", "blood_glucose": {"unit": "mg/dL", "value": "Low"}, "transmitter_time": {"unit": "long integer", "value": 12}, "transmitter_id": "FIXTURE"}
+    ]
+  }
+}

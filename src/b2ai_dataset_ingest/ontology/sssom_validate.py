@@ -41,7 +41,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from b2ai_dataset_ingest.mapping.conditions import ConditionParseError, parse_condition
+from b2ai_dataset_ingest.mapping.conditions import (
+    ConditionParseError,
+    parse_condition,
+    parse_subject_condition,
+)
 from b2ai_dataset_ingest.mapping.hpo_rules import EVIDENCE_CODES, is_self_report
 from b2ai_dataset_ingest.mapping.loaders import load_data_dict
 from b2ai_dataset_ingest.mapping.sssom_io import (
@@ -220,7 +224,7 @@ def _check_row(
     row: dict[str, str],
     fname: str,
     file_prefixes: set[str],
-    seen: set[tuple[str, str, str, str]],
+    seen: set[tuple[str, str, str, str, str]],
     object_prefix: str,
 ) -> Iterable[Finding]:
     subj = row.get("subject_id", "").strip()
@@ -298,6 +302,21 @@ def _check_row(
                 ),
             )
 
+    # The stratum (sex / age) a gate applies to. Only meaningful on a gated row: a
+    # term-to-term mapping is not "about" one sex.
+    when_subject = row.get("when_subject", "").strip()
+    if when_subject:
+        try:
+            parse_subject_condition(when_subject)
+        except ConditionParseError as exc:
+            yield err("bad-when-subject", f"when_subject {when_subject!r} does not parse: {exc}")
+        if not when_value:
+            yield err(
+                "unconditioned-subject",
+                f"when_subject {when_subject!r} without a when_value: a stratum only "
+                "qualifies a gate",
+            )
+
     # The absent pole. Row-level rather than column-level, so one file can carry measured
     # rows that rule a phenotype out alongside rows that do not.
     if modifier:
@@ -316,7 +335,10 @@ def _check_row(
             )
 
     if subj and pred and obj:
-        key = (subj, pred, modifier, obj)
+        # A stratified set legitimately repeats (subject, predicate, modifier, object) once
+        # per stratum, so the stratum is part of identity. The gate is not: within one
+        # stratum a triple carries one row, however the when_value differs.
+        key = (subj, pred, modifier, obj, when_subject)
         if key in seen:
             yield err("duplicate", f"duplicate mapping {key}")
         seen.add(key)
@@ -442,7 +464,7 @@ def validate_paths(
                     result.ontology_versions[source] = version
         return backends[key]
 
-    seen: set[tuple[str, str, str, str]] = set()  # cross-file duplicate detection
+    seen: set[tuple[str, str, str, str, str]] = set()  # cross-file duplicate detection
     for path in paths:
         fname = path.name
         try:
