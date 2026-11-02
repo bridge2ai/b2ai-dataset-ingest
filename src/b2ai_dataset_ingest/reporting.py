@@ -37,6 +37,8 @@ class IngestReport:
     diseases_emitted: int = 0
     #: MedicalAction treatments from a medications supplement.
     treatments_emitted: int = 0
+    #: Bulk files linked (never embedded) from the modality manifests.
+    files_linked: int = 0
     #: HPO PhenotypicFeatures derived from value-gated (``when_value``) SSSOM mappings.
     features_derived: int = 0
     #: Rows collapsed by "last non-empty wins" within a resolved (participant, session) group.
@@ -142,6 +144,7 @@ class IngestReport:
             f"  measurements:        {self.measurements_emitted}",
             f"  diseases:            {self.diseases_emitted}",
             f"  treatments:          {self.treatments_emitted}",
+            f"  files linked:        {self.files_linked}",
             f"  features derived:    {self.features_derived}",
             f"  tables read:         {len(self.tables_read)}"
             + (f" ({', '.join(self.tables_read)})" if self.tables_read else ""),

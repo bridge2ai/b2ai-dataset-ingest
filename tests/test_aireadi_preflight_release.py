@@ -99,13 +99,17 @@ def test_present_datatypes_are_counted_from_their_manifests():
     env = " ".join(f.message for f in _findings(report, "environment"))
     assert "<5 manifest row(s), <5 participant(s), <5 file path(s)" in env
     assert "leelab_anura" in env
-    assert any("modalities present: cardiac_ecg, environment" in f.message for f in report.findings)
+    assert any(
+        "modalities present: cardiac_ecg, environment, retinal_photography, "
+        "wearable_activity_monitor, wearable_blood_glucose" in f.message
+        for f in report.findings
+    )
 
 
 def test_absent_datatypes_warn_by_default_and_error_under_strict():
     lenient = validate_aireadi(FIXTURE, CONFIG_DIR, modalities=True)
     absent = {f.table for f in lenient.warnings if "datatype directory not present" in f.message}
-    assert absent == set(MODALITY_DATATYPES) - {"cardiac_ecg", "environment"}
+    assert absent == {"retinal_flio", "retinal_oct", "retinal_octa"}
     assert lenient.errors == [], lenient.render()
 
     strict = validate_aireadi(FIXTURE, CONFIG_DIR, strict_coverage=True, modalities=True)

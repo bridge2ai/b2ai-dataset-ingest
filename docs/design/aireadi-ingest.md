@@ -146,6 +146,20 @@ published standard: a second OMOP dataset reuses the module and writes only its 
   measurement set carry **sex- and age-stratified gates** via the `when_subject` SSSOM
   column (see `docs/mapping-conventions.md`): the sex-blind rows stay as the fallback for an
   unknown sex, and the stratified rows fire only for a matching, known subject.
+- **The non-clinical datatypes (2026-10-22).** `config/aireadi/modalities/*.yaml`, one per
+  datatype directory, read from each `manifest.tsv` and never by walking the tree. Opt-in
+  on the CLI so the clinical output stays byte-identical by default. `--files file|folder`
+  links every manifest path (or every participant device folder, with a count) as a
+  `File` with release-relative URI (`--file-uri-base` to re-base) and datatype / modality /
+  device / format / laterality / protocol attributes. `--device-summaries` emits the ECG
+  manifest's own intervals and axes per recording (LOINC-coded, gated on AHA/ACCF/HRS
+  cut-points with QTc stratified by sex, `mappings/b2ai-aireadi-devices.sssom.tsv`) and
+  window statistics over the CGM and wearable series (mean, CV, the LOINC-defined time-in-
+  range bands, GMI; wrist heart rate and SpO2 mean/min) with the reading count and span in
+  the description. **A series never enters a packet as samples** (docs/plans/0002 step 20;
+  `tests/test_packet_size.py` and `test_no_series_sample_reaches_the_packet` pin it).
+  The device's ECG interpretation strings are not mapped: AI-READI states they are not
+  physician-reviewed. Retinal imaging and the environment sensor are links only.
 
 ### Value-gated HPO derivation
 

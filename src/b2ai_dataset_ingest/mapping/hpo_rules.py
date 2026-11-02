@@ -233,8 +233,12 @@ def derive_features(
     conditions read the raw cell. A blank cell asserts nothing.
 
     ``subject`` carries the participant's stratification fields (``sex``, ``age`` in years)
-    for rules that declare a ``when_subject``. A rule with a subject condition fires only
-    when every field it names is present and matches; a rule without one fires for anyone.
+    for rules that declare a ``when_subject``. For one column, the stratified rules whose
+    subject condition matches are the authoritative set: when at least one matches, the
+    unconditioned rules for that column are not evaluated at all. They are the fallback
+    for a subject the strata do not cover (an unknown sex), not a second opinion -- and
+    evaluating both would hand the sex-blind row's provenance to a feature the per-sex row
+    had already decided.
     """
     out: list[PhenotypicFeatureObservation] = []
     for column, rules in table_rules.items():
@@ -242,9 +246,13 @@ def derive_features(
         if not raw:
             continue
         answer = Answer(raw=raw, ordinal=resolve_ordinal(column, raw))
-        for rule in rules:
-            if rule.subject_condition is not None and not rule.subject_condition.matches(subject):
-                continue
+        stratified = [
+            r
+            for r in rules
+            if r.subject_condition is not None and r.subject_condition.matches(subject)
+        ]
+        applicable = stratified or [r for r in rules if r.subject_condition is None]
+        for rule in applicable:
             if rule.condition.matches(answer):
                 out.append(_feature_from_rule(rule, time))
     if report is not None:

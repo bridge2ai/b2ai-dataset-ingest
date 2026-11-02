@@ -180,6 +180,21 @@ class TreatmentObservation(BaseModel):
     description: str | None = None
 
 
+class FileReference(BaseModel):
+    """A pointer to a bulk data file the packet links but never embeds — GA4GH ``File``.
+
+    ``uri`` is relative to the release root unless a base is supplied at emit time;
+    ``attributes`` is the ``File.file_attributes`` map (datatype, modality, device,
+    laterality, fileFormat, …), ``individual_file_id`` the id the file itself uses for the
+    participant (``File.individual_to_file_identifiers``). Raw signals and images enter the
+    packet only this way; see docs/plans/0002 step 20.
+    """
+
+    uri: str
+    attributes: dict[str, str] = Field(default_factory=dict)
+    individual_file_id: str | None = None
+
+
 class Participant(BaseModel):
     """One participant = the unit of one output phenopacket."""
 
@@ -188,6 +203,9 @@ class Participant(BaseModel):
     measurements: list[MeasurementObservation] = Field(default_factory=list)
     phenotypic_features: list[PhenotypicFeatureObservation] = Field(default_factory=list)
     treatments: list[TreatmentObservation] = Field(default_factory=list)
+    files: list[FileReference] = Field(
+        default_factory=list, description="Linked bulk files (imaging, signals), never embedded."
+    )
     source_dataset: str | None = Field(
         None, description="e.g. 'bridge2ai-voice' — recorded in output metadata."
     )
