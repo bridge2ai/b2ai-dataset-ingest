@@ -46,10 +46,16 @@ def test_age_comes_from_participants_tsv(participants):
     assert participants["900004"].individual.age_iso8601 is None
 
 
-def test_sex_is_unset_because_the_release_redacts_it(participants, source_report):
-    assert all(p.individual.sex is None for p in participants.values())
-    # ...and that is reported rather than passing as a clean run.
+def test_person_csv_redacts_sex_and_that_is_reported(participants, source_report):
+    """The public tier's person.csv carries no sex; the demographics supplement does.
+
+    Without the supplement every subject would be UNKNOWN_SEX, and that must be reported
+    rather than pass as a clean run. With it (the fixture ships one), the redaction count
+    is still reported, so the output's sex can be traced to the supplement.
+    """
     assert source_report.fields_redacted["person.gender_concept_id"] == 3
+    # 900003 declined in the supplement, so it stays unset even with the supplement present.
+    assert participants["900003"].individual.sex is None
 
 
 def test_study_group_is_a_measurement_not_a_disease(participants):
@@ -279,8 +285,11 @@ def test_fixture_carries_no_real_looking_person_id():
         delimiter = "\t" if path.suffix == ".tsv" else ","
         with open(path, newline="") as fh:
             for row in csv.DictReader(fh, delimiter=delimiter):
-                # OMOP tables key on person_id; the modality manifests on participant_id.
-                person_id = (row.get("person_id") or row.get("participant_id") or "").strip()
+                # OMOP tables key on person_id; the modality manifests on participant_id;
+                # the REDCap supplements on studyid.
+                person_id = (
+                    row.get("person_id") or row.get("participant_id") or row.get("studyid") or ""
+                ).strip()
                 assert person_id.startswith("9000"), (
                     f"{path.name} carries {person_id!r}, which is not a 9000xx fixture id"
                 )

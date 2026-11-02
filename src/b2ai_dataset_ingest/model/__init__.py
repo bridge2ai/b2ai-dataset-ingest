@@ -20,9 +20,11 @@ from b2ai_dataset_ingest.model.core import (
     Quantity,
     ReferenceRange,
     TimePoint,
+    TreatmentObservation,
 )
 
 __all__ = [
+    "TreatmentObservation",
     "DiseaseObservation",
     "Evidence",
     "ExternalReference",

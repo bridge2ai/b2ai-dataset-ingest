@@ -176,6 +176,71 @@ def _compare_numeric(op: str, left: float, right: float) -> bool:
     return False
 
 
+# ------------------------------------------------------------- subject conditions
+
+#: The ``Individual`` fields a ``when_subject`` term may name. ``sex`` is the phenopacket
+#: enum spelling (FEMALE/MALE/OTHER_SEX/UNKNOWN_SEX); ``age`` is whole years at the
+#: observation. Closed on purpose: a gate that could reference an arbitrary field would
+#: silently stop firing when a reader renamed one.
+SUBJECT_FIELDS = frozenset({"sex", "age"})
+
+_SUBJECT_TERM_RE = re.compile(r"^([A-Za-z_]+)\s*(==|!=|>=|<=|>|<)\s*(.+)$")
+
+
+@dataclass(frozen=True)
+class SubjectCondition:
+    """A parsed ``when_subject`` expression: ``field`` -> condition, every field must hold.
+
+    This is the stratification layer for a value gate: a reference interval that differs by
+    sex or age is written as several rows, each with the same ``when_value`` shape and a
+    ``when_subject`` naming who it applies to (``sex == "FEMALE"``, ``sex == "MALE" & age >=
+    50``). A row whose subject condition names a field the participant has no value for
+    does **not** fire -- an unknown sex must never satisfy a female-only gate.
+    """
+
+    conditions: tuple[tuple[str, ValueCondition], ...]
+    raw: str
+
+    def matches(self, subject: dict[str, str] | None) -> bool:
+        if not self.conditions:
+            return True
+        if not subject:
+            return False
+        for field, condition in self.conditions:
+            raw = (subject.get(field) or "").strip()
+            if not raw:
+                return False
+            if not condition.matches(Answer(raw=raw, ordinal=None)):
+                return False
+        return True
+
+
+def parse_subject_condition(text: str) -> SubjectCondition:
+    """Parse a ``when_subject`` expression: ``&``-separated ``<field> <op> <operand>`` terms.
+
+    Fields are restricted to :data:`SUBJECT_FIELDS`. Each term reuses the ``when_value``
+    operator grammar, so ``sex == "FEMALE"`` and ``age >= 50`` parse exactly as a value gate
+    would, and the same evaluator compares them. Raises :class:`ConditionParseError` for an
+    empty expression, an unknown field, or a malformed term.
+    """
+    raw = text.strip()
+    if not raw:
+        raise ConditionParseError("empty subject condition")
+    parsed: list[tuple[str, ValueCondition]] = []
+    for term in raw.split("&"):
+        term = term.strip()
+        match = _SUBJECT_TERM_RE.match(term)
+        if not match:
+            raise ConditionParseError(f"unrecognized subject term {term!r} in {raw!r}")
+        field, op, operand = match.group(1).lower(), match.group(2), match.group(3).strip()
+        if field not in SUBJECT_FIELDS:
+            raise ConditionParseError(
+                f"unknown subject field {field!r} in {raw!r}; allowed: {sorted(SUBJECT_FIELDS)}"
+            )
+        parsed.append((field, parse_condition(f"{op} {operand}")))
+    return SubjectCondition(conditions=tuple(parsed), raw=raw)
+
+
 def _as_number(text: str) -> float | int | None:
     """Parse ``"3"`` -> ``3`` and ``"3.5"`` -> ``3.5``; ``None`` if not numeric.
 
