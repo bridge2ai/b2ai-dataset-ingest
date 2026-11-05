@@ -73,6 +73,16 @@ published standard: a second OMOP dataset reuses the module and writes only its 
 - **Subjects and assay ids are `b2ai:<omop_table>.<redcap_var>`.** The table qualifier is
   mandatory: the `condition_occurrence` variables also appear in `observation`, where they are
   a self-reported yes/no answer rather than an asserted condition — a different item.
+- **`condition_occurrence` is self-report too, and the mappings target the question, not
+  the OMOP concept name (clinical review 2026-11-03).** Every item is an answer to the REDCap
+  `health_survey` form, stem "Has a doctor or other healthcare professional ever told you
+  that you have/had…", Yes / No / Prefer not to say (AI-READI DataElementMaps). The reviewer's
+  rule was "if this is extracted from EHR, the mapping is exact"; it is not, so where
+  AI-READI attached a concept narrower than the wording asked — `mhoccur_ra` "Arthritis" for
+  "Arthritis (joint pain)", `mhoccur_crt` "Bilateral cataracts" for "Cataracts (in one or both
+  eyes)", `mhoccur_ear` "Ear anomalies with hearing impairment" for "Hearing impairment" — the
+  object follows the wording and the row comment says so. An EHR-sourced release of the same
+  variables would flip those three to `exactMatch` on the concept.
 - **No `Disease.onset`.** `condition_start_date == condition_end_date` on every row: it
   records when the medical-history form was filled in, not any onset. Emitting it as onset
   would assert a false natural history a consumer could not detect.
@@ -138,8 +148,9 @@ published standard: a second OMOP dataset reuses the module and writes only its 
   `Individual.sex`, `genderid` → `Individual.gender` (LOINC 76691-5 answer codes, the
   vocabulary the phenopacket-schema docs use), and each coded medication row →
   `MedicalAction.treatment` with the source's RxNorm CUI as agent, NCIT route and frequency,
-  UCUM dose unit. Both are optional inputs resolved by glob under the root or
-  `--supplements-dir`. **Race, ethnicity, ancestry and every free-text column are not read**:
+  UCUM dose unit. Both are optional inputs resolved by glob under the release root only
+  (`<root>/supplements/`, any readable format); an absent one is reported with that folder,
+  there is no out-of-tree lookup. **Race, ethnicity, ancestry and every free-text column are not read**:
   there is no phenopacket slot, AI-READI withheld them from the public tier on purpose, and
   free text is Data no model may consult (§3.C). A medication row with no RxNorm code is
   counted and dropped rather than resolved from `cmname`. Sex being known is what lets the

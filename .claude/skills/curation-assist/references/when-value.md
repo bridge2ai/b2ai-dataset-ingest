@@ -15,6 +15,14 @@ A term mapping (`b2ai:phq9.feeling_depressed → HP:5200273 Pathological sadness
 > not survive into the phenopacket, so `excluded = true` read as an unqualified "does not have
 > this phenotype". Never author one; the validator errors on the column
 > (`withdrawn-column`). An answer below the gate now asserts nothing, exactly like a blank cell.
+>
+> **This is the self-report rule.** Measured-value rows (`evidence_code: ECO:0007307`, a lab or
+> vital against a reference range) are the exception: there a `relatedMatch` may gate and a `Not`
+> row may assert the absent pole, because the exclusion carries the assay's own time — see
+> `docs/mapping-conventions.md`, *Measured-value (reference-range) mappings*. Even there, do not
+> author new `Not` rows for now: the clinical reviewer has asked (2026-11-03) that a result within
+> normal limits read as one "normal" assertion rather than "not increased and not decreased", and
+> the representation is under review.
 
 ## When to add one (and when not to)
 
@@ -113,4 +121,8 @@ b2ai:phq9.feeling_depressed  skos:exactMatch  HP:5200273  >=1
 - Numeric conditions are evaluated against the **ordinal score** (the same value the emitted
   Measurement carries), resolved from the data dict's `choices`. If an item has no resolvable
   ordinal, a numeric `when_value` will never fire — use a string/`in {...}` condition instead.
+- **A membership table is gated `== 1`.** Where a row exists only for a Yes (OMOP
+  `condition_occurrence`, a Voice `diagnosis/<condition>.tsv`), there is no answer cell to test; the
+  reader feeds each row to the rule as the value `1`. Write `== 1`, not `>=1` — and not nothing: an
+  empty `when_value` makes the row inert, silently.
 - Every derived feature is auto-stamped with ECO self-report provenance; you do not author that.
