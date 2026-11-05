@@ -148,8 +148,9 @@ published standard: a second OMOP dataset reuses the module and writes only its 
   `Individual.sex`, `genderid` → `Individual.gender` (LOINC 76691-5 answer codes, the
   vocabulary the phenopacket-schema docs use), and each coded medication row →
   `MedicalAction.treatment` with the source's RxNorm CUI as agent, NCIT route and frequency,
-  UCUM dose unit. Both are optional inputs resolved by glob under the root or
-  `--supplements-dir`. **Race, ethnicity, ancestry and every free-text column are not read**:
+  UCUM dose unit. Both are optional inputs resolved by glob under the release root only
+  (`<root>/supplements/`, any readable format); an absent one is reported with that folder,
+  there is no out-of-tree lookup. **Race, ethnicity, ancestry and every free-text column are not read**:
   there is no phenopacket slot, AI-READI withheld them from the public tier on purpose, and
   free text is Data no model may consult (§3.C). A medication row with no RxNorm code is
   counted and dropped rather than resolved from `cmname`. Sex being known is what lets the

@@ -85,6 +85,42 @@ def test_every_demographics_column_is_mapped_or_listed_as_dropped():
     assert not any(f.level == "error" for f in demographics), report.render()
 
 
+def test_a_supplement_is_found_in_any_readable_format(tmp_path):
+    """The configs name the CSV export; the controlled-tier delivery is an .xlsx.
+
+    Both live in the release tree at the folder the pattern names. The pattern's extension
+    must not hide the workbook, and Excel's own lock file must not be picked up instead.
+    """
+    from b2ai_dataset_ingest.mapping.loaders import load_mapping
+    from b2ai_dataset_ingest.sources.aireadi.supplements import resolve_supplement
+
+    mapping = load_mapping(CONFIG_DIR / "supplements" / "demographics.yaml")
+    # Under the fixture root the pattern finds the CSV, as before.
+    assert resolve_supplement(FIXTURE, mapping) == FIXTURE / "supplements" / "demographics.csv"
+    # Under a release root holding the real delivery it finds the workbook.
+    root = tmp_path / "release"
+    (root / "supplements").mkdir(parents=True)
+    name = "AIREADi_Demographics and Other_Protected Dataset_PilotthruWave4.xlsx"
+    delivered = root / "supplements" / name
+    delivered.write_bytes(b"")
+    (root / "supplements" / f"~${name}").write_bytes(b"")
+    decoy = root / "supplements" / "AIREADi Fairhub DataDicitonary Protected Dataset.xlsx"
+    decoy.write_bytes(b"")
+    assert resolve_supplement(root, mapping) == delivered
+
+
+def test_an_absent_supplement_says_where_to_stage_it(tmp_path, caplog):
+    """There is no out-of-tree lookup: a missing supplement names the folder under root."""
+    from b2ai_dataset_ingest.mapping.loaders import load_mapping
+    from b2ai_dataset_ingest.sources.aireadi.supplements import resolve_supplement
+
+    mapping = load_mapping(CONFIG_DIR / "supplements" / "demographics.yaml")
+    with caplog.at_level("WARNING"):
+        assert resolve_supplement(tmp_path, mapping) is None
+    assert str(tmp_path / "supplements") in caplog.text
+    assert "stage the protected delivery" in caplog.text
+
+
 # ---------- medications
 def _treatments(participants, person_id):
     return participants[person_id].treatments

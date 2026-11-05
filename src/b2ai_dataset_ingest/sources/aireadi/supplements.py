@@ -44,32 +44,67 @@ logger = logging.getLogger(__name__)
 #: answer, not a value, and recode to nothing.
 DECLINED = frozenset({"777", "888", "999", "777.0", "888.0", "999.0"})
 
+#: The formats ``stream_table`` reads. A config pattern ending in one of these matches the
+#: same name in any of the others: the configs name the CSV export, the controlled-tier
+#: delivery is the ``.xlsx`` it was exported from.
+SUPPLEMENT_SUFFIXES = (".csv", ".tsv", ".txt", ".xlsx", ".xlsm")
+
 
 # -- locating and reading a supplement -----------------------------------------------
-def resolve_supplement(
-    root: Path, mapping: dict[str, Any], override_dir: Path | None
-) -> Path | None:
+def resolve_supplement(root: Path, mapping: dict[str, Any]) -> Path | None:
     """The on-disk file for a supplement config, or None if absent.
 
     ``file`` in the config is a glob relative to ``root`` (the real deliveries are named
-    with spaces and wave suffixes, so a pattern beats a fixed name). ``override_dir``
-    replaces the directory part, for a delivery staged outside the release tree.
+    with spaces and wave suffixes, so a pattern beats a fixed name). Supplements are read
+    from the release tree only: the protected delivery is staged inside ``root`` at the
+    folder the pattern names, never discovered elsewhere. The pattern's extension is not
+    binding: any format ``stream_table`` reads is accepted, so ``*emographics*.csv`` also
+    finds the ``.xlsx`` the delivery actually ships. An absent supplement is logged with
+    the folder to stage it in (see :func:`supplement_location_hint`).
     """
     pattern = str(mapping.get("file") or "")
     if not pattern:
         return None
-    if override_dir is not None:
-        pattern = str(Path(override_dir) / Path(pattern).name)
-        base = Path("/") if Path(pattern).is_absolute() else Path(".")
-        matches = sorted(base.glob(pattern.lstrip("/"))) if "*" in pattern else [Path(pattern)]
-    else:
-        matches = sorted(root.glob(pattern))
-    matches = [m for m in matches if m.is_file()]
+    matches = sorted(m for m in _glob_any_format(root, pattern) if m.is_file())
     if len(matches) > 1:
         logger.warning(
             "supplement pattern %r matches %d files; using the first", pattern, len(matches)
         )
-    return matches[0] if matches else None
+    if not matches:
+        logger.warning("%s", supplement_location_hint(root, mapping))
+        return None
+    return matches[0]
+
+
+def supplement_location_hint(root: Path, mapping: dict[str, Any]) -> str:
+    """One sentence telling the user where an absent supplement has to be staged."""
+    pattern = str(mapping.get("file") or "")
+    folder = root / Path(pattern).parent
+    table = mapping.get("table", Path(pattern).name)
+    return (
+        f"supplement {table!r} not found: stage the protected delivery under {folder} "
+        f"so that it matches {pattern!r} (any of {', '.join(SUPPLEMENT_SUFFIXES)})"
+    )
+
+
+def _glob_any_format(base: Path, pattern: str) -> set[Path]:
+    """``base.glob(pattern)`` plus the same pattern under every other supported suffix.
+
+    A spreadsheet's own lock file (``~$Name.xlsx``) is skipped. A pattern with no
+    supported suffix is globbed as written.
+    """
+    if "*" not in pattern:
+        return {base / pattern}
+    suffix = Path(pattern).suffix.lower()
+    if suffix not in SUPPLEMENT_SUFFIXES:
+        return set(base.glob(pattern))
+    stem = pattern[: -len(suffix)]
+    return {
+        m
+        for alt in SUPPLEMENT_SUFFIXES
+        for m in base.glob(stem + alt)
+        if not m.name.startswith("~$")
+    }
 
 
 def stream_table(path: Path) -> Iterator[dict[str, str]]:

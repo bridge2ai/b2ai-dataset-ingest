@@ -227,15 +227,6 @@ def aireadi(
         Path("config/aireadi"), "--config", "-c", help="Mapping config dir."
     ),
     target: str = typer.Option("phenopacket", "--target", "-t", help="Output target."),
-    supplements_dir: Path = typer.Option(
-        None,
-        "--supplements-dir",
-        help=(
-            "Directory holding the protected supplements (demographics, medications) when "
-            "they are staged outside the release tree. Default: the file globs in "
-            "config/aireadi/supplements/*.yaml, resolved under --input."
-        ),
-    ),
     files: str = typer.Option(
         "none",
         "--files",
@@ -282,7 +273,6 @@ def aireadi(
         source = AireadiSource(
             root=input,
             config_dir=config,
-            supplements_dir=supplements_dir,
             files=files,
             device_summaries=device_summaries,
         )
@@ -321,11 +311,6 @@ def validate_aireadi_cmd(
             "datatype, and which documented datatypes the delivery lacks. Counts only."
         ),
     ),
-    supplements_dir: Path = typer.Option(
-        None,
-        "--supplements-dir",
-        help="Directory holding the protected supplements, if staged outside --input.",
-    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log details."),
 ) -> None:
     """Preflight-check the AI-READI OMOP layout against its configs.
@@ -345,7 +330,6 @@ def validate_aireadi_cmd(
         config_dir=config,
         strict_coverage=strict_coverage,
         modalities=modalities,
-        supplements_dir=supplements_dir,
     )
     typer.echo(report.render())
     if report.errors:
