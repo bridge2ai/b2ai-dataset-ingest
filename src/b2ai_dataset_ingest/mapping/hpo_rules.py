@@ -43,8 +43,10 @@ from pathlib import Path
 from b2ai_dataset_ingest.mapping.conditions import (
     Answer,
     ConditionParseError,
+    SubjectCondition,
     ValueCondition,
     parse_condition,
+    parse_subject_condition,
 )
 from b2ai_dataset_ingest.mapping.sssom_io import default_mapping_files, parse_sssom
 from b2ai_dataset_ingest.model import (
@@ -107,6 +109,9 @@ class ConditionalRule:
     #: ``predicate_modifier: Not`` -- the gate names the values that rule the phenotype OUT.
     excluded: bool = False
     evidence_code: str = SELF_REPORT_EVIDENCE.id
+    #: ``when_subject`` -- who the gate applies to (sex / age strata). None means everyone.
+    subject_condition: SubjectCondition | None = None
+    when_subject: str = ""
 
 
 # --------------------------------------------------------------------------- loading
@@ -179,6 +184,17 @@ def _rule_from_row(row: dict[str, str], fname: str) -> ConditionalRule | None:
             "%s: skipping %s — predicate_modifier on a self-report row", fname, subject_id
         )
         return None
+    when_subject = (row.get("when_subject") or "").strip()
+    subject_condition = None
+    if when_subject:
+        try:
+            subject_condition = parse_subject_condition(when_subject)
+        except ConditionParseError as exc:
+            logger.warning(
+                "%s: skipping %s — unparseable when_subject %r (%s)",
+                fname, subject_id, when_subject, exc,
+            )
+            return None
     table, column = subject_id.split(":", 1)[1].split(".", 1)
     return ConditionalRule(
         subject_id=subject_id,
@@ -193,6 +209,8 @@ def _rule_from_row(row: dict[str, str], fname: str) -> ConditionalRule | None:
         confidence=(row.get("confidence") or "").strip(),
         excluded=bool(modifier),
         evidence_code=evidence_code,
+        subject_condition=subject_condition,
+        when_subject=when_subject,
     )
 
 
@@ -205,6 +223,7 @@ def derive_features(
     resolve_ordinal: Callable[[str, str], int | None],
     time: TimePoint | None = None,
     report: IngestReport | None = None,
+    subject: dict[str, str] | None = None,
 ) -> list[PhenotypicFeatureObservation]:
     """Emit HPO ``PhenotypicFeature``s for the rules that match this row's answered cells.
 
@@ -212,6 +231,14 @@ def derive_features(
     :func:`load_conditional_rules`). ``resolve_ordinal(column, raw)`` returns the ordinal score
     the reader resolved for a cell (``None`` if unresolved), used for numeric conditions; string
     conditions read the raw cell. A blank cell asserts nothing.
+
+    ``subject`` carries the participant's stratification fields (``sex``, ``age`` in years)
+    for rules that declare a ``when_subject``. For one column, the stratified rules whose
+    subject condition matches are the authoritative set: when at least one matches, the
+    unconditioned rules for that column are not evaluated at all. They are the fallback
+    for a subject the strata do not cover (an unknown sex), not a second opinion -- and
+    evaluating both would hand the sex-blind row's provenance to a feature the per-sex row
+    had already decided.
     """
     out: list[PhenotypicFeatureObservation] = []
     for column, rules in table_rules.items():
@@ -219,7 +246,13 @@ def derive_features(
         if not raw:
             continue
         answer = Answer(raw=raw, ordinal=resolve_ordinal(column, raw))
-        for rule in rules:
+        stratified = [
+            r
+            for r in rules
+            if r.subject_condition is not None and r.subject_condition.matches(subject)
+        ]
+        applicable = stratified or [r for r in rules if r.subject_condition is None]
+        for rule in applicable:
             if rule.condition.matches(answer):
                 out.append(_feature_from_rule(rule, time))
     if report is not None:
@@ -258,7 +291,8 @@ def _describe(rule: ConditionalRule) -> str:
         origin, gate = "self-reported item", "answer"
     else:
         origin, gate = "measured value of", "value"
+    stratum = f" for {rule.when_subject}" if rule.when_subject else ""
     return (
         f"Derived {pole} from {origin} {source} "
-        f"[{rule.predicate_id} {target}] when {gate} {rule.when_value}{confidence}."
+        f"[{rule.predicate_id} {target}] when {gate} {rule.when_value}{stratum}{confidence}."
     )

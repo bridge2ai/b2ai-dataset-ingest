@@ -153,14 +153,14 @@ def test_no_published_observation_item_is_unaccounted_for():
     ]
     rules = _drop_prefixes(load_mapping(SCOPE))
     ingested = set()
-    for name in ("cesd10", "paid5"):
-        ingested |= set(
-            load_mapping(CONFIG_DIR / "observation" / f"{name}.yaml").get("measures") or {}
-        )
+    for instrument in sorted((CONFIG_DIR / "observation").glob("*.yaml")):
+        if instrument.name == "scope.yaml":
+            continue
+        ingested |= set(load_mapping(instrument).get("measures") or {})
     # Items belonging to measurement.csv, and lab rows whose SRC_CODE *is* a LOINC code.
     measurement_families = (
         "import_", "lbscat_", "bmi_", "bp1_", "bp2_", "height_", "weight_", "waist_", "hip_",
-        "whr_", "pulse_", "viaod", "viaos", "plcs", "mlcs", "mss", "msl", "moca", "naming",
+        "whr_", "pulse_", "viao", "plcs", "mlcs", "mss", "msl", "moca", "naming",
         "digitspan", "lettera", "subtraction", "repetition", "fluency", "delayed", "memory_",
         "trails", "cube", "clock",
     )
@@ -391,5 +391,9 @@ def test_only_ingested_observation_items_carry_a_gate():
     from b2ai_dataset_ingest.mapping.hpo_rules import load_conditional_rules
 
     gated = set(load_conditional_rules(dataset="aireadi").get("observation", {}))
-    ingested = set(load_mapping(CONFIG_DIR / "observation" / "cesd10.yaml")["measures"])
+    ingested: set[str] = set()
+    for path in (CONFIG_DIR / "observation").glob("*.yaml"):
+        ingested |= set(load_mapping(path).get("measures") or {})
     assert gated and gated <= ingested
+    # ...and the medical-history grid stays term-to-term only, pending the absent-pole review.
+    assert not any(item.startswith(("mhoccur_h", "mhterm_", "mh_")) for item in gated)

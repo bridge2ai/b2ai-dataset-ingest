@@ -1,0 +1,115 @@
+# Mapping: AI-READI clinical_data/observation.csv, substance use -> MeasurementObservation
+#
+# Tobacco, alcohol, vaping and cannabis use: lifetime and current use (yes/no), age started,
+# years of use, and amount per day / week. Emitted as ordinal or count Measurements; NO HPO
+# derivation -- substance use is exposure, not phenotype, and HPO's tobacco/alcohol terms
+# describe dependence, which these items do not establish.
+#
+# SOURCE. Item keys, labels and answer coding from AI-READI's published crosswalk
+# (ai-readi-docs mappings.json, CC-BY-4.0). Every LOINC code below was verified by
+# exact-code lookup against the NLM Clinical Table LOINC service, 2026-10-22; items the
+# crosswalk assigns an AI-READI-local concept carry project-local ids. Two crosswalk codes
+# were NOT adopted: 63576-3 for sualcage is "age began to drink REGULARLY (SSAGA)", not age of
+# first drink; 69721-9 for sualckncf is the PHQ "do you ever drink" item, not "ever consumed".
+# Both ship project-local ids with the crosswalk code noted.
+#
+# ANSWERS. Yes/no items are 1/0 (777 prefer-not-to-say screened); ages and years are coded as
+# their own integer; amounts are per day (cigarettes) or per week (drinks). `sumrjtrt`
+# (form of cannabis, check-all-that-apply) is not mapped: one row per choice, no scalar.
+table: observation
+delimiter: ","
+id_column: person_id
+key_column: observation_source_value
+date_column: observation_datetime
+visit_column: visit_occurrence_id
+value_columns: [value_as_number]
+measures:
+  # -- tobacco --------------------------------------------------------------------------
+  susmkncf:
+    assay: { id: "LOINC:63581-3", label: "Smoked at least 100 cigarettes in entire life" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  susmkcdur:
+    assay: { id: "LOINC:64234-8", label: "Current smoker" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  susmkstaage:
+    assay: { id: "LOINC:67740-1", label: "At which age did you start smoking [PhenX]" }
+    unit: { id: "UCUM:a", label: "year" }
+  susmkstoage:
+    assay: { id: "LOINC:67741-9", label: "Smoking tobacco use duration" }
+    unit: { id: "UCUM:a", label: "year" }
+  susmkdosfr:
+    assay: { id: "LOINC:66548-9", label: "How many of these do you smoke per day [#] [PhenX]" }
+    unit: { id: "UCUM:/d", label: "per day" }
+  # -- vaping ---------------------------------------------------------------------------
+  suvpkncf1:
+    assay: { id: "b2ai:observation.suvpkncf1", label: "Ever vaped or used e-cigarettes" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  suvpcdur:
+    assay: { id: "b2ai:observation.suvpcdur", label: "Currently vapes or uses e-cigarettes" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  suvpstage:
+    assay: { id: "b2ai:observation.suvpstage", label: "Age started vaping or using e-cigarettes" }
+    unit: { id: "UCUM:a", label: "year" }
+  suvptoage:
+    assay: { id: "b2ai:observation.suvptoage", label: "Total years vaped or used e-cigarettes" }
+    unit: { id: "UCUM:a", label: "year" }
+  suvpdosfr:
+    assay: { id: "b2ai:observation.suvpdosfr", label: "Days per week vaping or using e-cigarettes" }
+    unit: { id: "UCUM:d/wk", label: "days per week" }
+  # -- alcohol --------------------------------------------------------------------------
+  sualckncf:
+    assay: { id: "b2ai:observation.sualckncf", label: "Ever consumed alcohol" }   # crosswalk 69721-9 (PHQ item) not adopted
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  sualcage:
+    assay: { id: "b2ai:observation.sualcage", label: "Age started drinking alcohol" }   # crosswalk 63576-3 (SSAGA regular drinking) not adopted
+    unit: { id: "UCUM:a", label: "year" }
+  suvptoyr:
+    assay: { id: "LOINC:74012-6", label: "Number of years alcohol consumed [Time]" }   # the key says 'vp' but the item asks about alcohol
+    unit: { id: "UCUM:a", label: "year" }
+  subrkncf:
+    assay: { id: "b2ai:observation.subrkncf", label: "Any beer or ale in the past year" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  subrdosfr:
+    assay: { id: "b2ai:observation.subrdosfr", label: "Bottles or cans of beer in an average week" }
+    unit: { id: "UCUM:/wk", label: "per week" }
+  suwnkncf:
+    assay: { id: "b2ai:observation.suwnkncf", label: "Any wine in the past year" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  suwndosfr:
+    assay: { id: "b2ai:observation.suwndosfr", label: "Glasses of wine in an average week" }
+    unit: { id: "UCUM:/wk", label: "per week" }
+  sulqkncf:
+    assay: { id: "b2ai:observation.sulqkncf", label: "Any liquor in the past year" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  sulqdosfr:
+    assay: { id: "b2ai:observation.sulqdosfr", label: "Shots of liquor in an average week" }
+    unit: { id: "UCUM:/wk", label: "per week" }
+  sualcdrv:
+    assay: { id: "b2ai:observation.sualcdrv", label: "Drives after having a drink (frequency category)" }
+    unit: { id: "UCUM:{score}", label: "score" }
+  # -- cannabis -------------------------------------------------------------------------
+  sumrjkncf:
+    assay: { id: "b2ai:observation.sumrjkncf", label: "Ever used marijuana (cannabis)" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  sumrjcdur:
+    assay: { id: "b2ai:observation.sumrjcdur", label: "Currently uses marijuana" }
+    unit: { id: "UCUM:{score}", label: "score" }
+    description: "1 = yes, 0 = no"
+  sumrjstage:
+    assay: { id: "LOINC:91384-8", label: "Age when first used marijuana" }
+    unit: { id: "UCUM:a", label: "year" }
+  sumrjceddur:
+    assay: { id: "b2ai:observation.sumrjceddur", label: "Total years used marijuana" }
+    unit: { id: "UCUM:a", label: "year" }
+  sumrjfr:
+    assay: { id: "b2ai:observation.sumrjfr", label: "Days per week using marijuana" }
+    unit: { id: "UCUM:d/wk", label: "days per week" }

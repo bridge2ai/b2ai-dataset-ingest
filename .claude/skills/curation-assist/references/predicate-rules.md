@@ -218,6 +218,25 @@ functional vocal cord dysfunction; the `dysphagia` hits are all syndromes that m
 dysphagia). **Search before assuming a disease ontology is the better home**: for a functional
 voice finding, HPO is not the fallback, it is the right answer.
 
+### Map the wording the participant answered, not the source's concept name — and say which
+
+A source can attach a concept name to an item that is narrower, or just different, from the
+question actually asked. AI-READI's OMOP export labels `mhoccur_crt` *Bilateral cataracts* for the
+item "Cataracts (in one or both eyes)", `mhoccur_ear` *Ear anomalies with hearing impairment* for
+"Hearing impairment", and `mhoccur_ra` *Arthritis* for "Arthritis (joint pain)". The clinical
+review's rule (2026-11-03): **"if this information is extracted from EHR, the mapping is exact"** —
+i.e. the predicate depends on *what the row is evidence of*. An EHR-coded row is evidence of the
+coded concept, so the concept name is the subject. A self-report row is evidence of the answer to
+the question, so the **question wording** is the subject and the concept name is a relabelling to
+ignore. All three items are REDCap self-report ("Has a doctor … ever told you that you have/had …"),
+so `cataract`, `hearing loss disorder` and `arthropathy` stand. Two habits follow:
+
+- **Establish provenance before choosing a predicate**, and record it in the file header, not
+  just in your head — the same variable names would flip to `exactMatch` on an EHR-sourced release.
+- When `subject_label` is the source's concept name (kept for traceability), **quote the asked
+  wording in the comment** wherever the two differ, so a reviewer can see which one the predicate
+  was chosen against.
+
 ## Trap 1 — lexical match ≠ semantic match
 
 If the ontology term matched only because a **word** matched (label/synonym), re-read the

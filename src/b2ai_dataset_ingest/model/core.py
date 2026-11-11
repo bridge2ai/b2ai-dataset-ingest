@@ -163,6 +163,38 @@ class PhenotypicFeatureObservation(BaseModel):
     )
 
 
+class TreatmentObservation(BaseModel):
+    """A medication the participant reports taking — the GA4GH ``Treatment`` analogue.
+
+    Sourced from a current-medications list, so it is a point-in-time statement with no
+    start or end: ``time`` is when the list was taken. ``agent`` is the drug as the source
+    codes it (RxNorm for AI-READI); the dose is optional because a free-text amount may not
+    parse, and a treatment with an agent and no dose is still a treatment.
+    """
+
+    agent: OntologyTerm = Field(..., description="The drug, e.g. 'RxNorm:6809' metformin.")
+    route: OntologyTerm | None = Field(None, description="Route of administration (NCIT).")
+    dose: Quantity | None = Field(None, description="Amount per administration, with unit.")
+    frequency: OntologyTerm | None = Field(None, description="Schedule frequency (NCIT).")
+    time: TimePoint | None = Field(None, description="When the medication list was taken.")
+    description: str | None = None
+
+
+class FileReference(BaseModel):
+    """A pointer to a bulk data file the packet links but never embeds — GA4GH ``File``.
+
+    ``uri`` is relative to the release root unless a base is supplied at emit time;
+    ``attributes`` is the ``File.file_attributes`` map (datatype, modality, device,
+    laterality, fileFormat, …), ``individual_file_id`` the id the file itself uses for the
+    participant (``File.individual_to_file_identifiers``). Raw signals and images enter the
+    packet only this way; see docs/plans/0002 step 20.
+    """
+
+    uri: str
+    attributes: dict[str, str] = Field(default_factory=dict)
+    individual_file_id: str | None = None
+
+
 class Participant(BaseModel):
     """One participant = the unit of one output phenopacket."""
 
@@ -170,6 +202,10 @@ class Participant(BaseModel):
     diseases: list[DiseaseObservation] = Field(default_factory=list)
     measurements: list[MeasurementObservation] = Field(default_factory=list)
     phenotypic_features: list[PhenotypicFeatureObservation] = Field(default_factory=list)
+    treatments: list[TreatmentObservation] = Field(default_factory=list)
+    files: list[FileReference] = Field(
+        default_factory=list, description="Linked bulk files (imaging, signals), never embedded."
+    )
     source_dataset: str | None = Field(
         None, description="e.g. 'bridge2ai-voice' — recorded in output metadata."
     )
