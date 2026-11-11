@@ -153,14 +153,14 @@ def test_no_published_observation_item_is_unaccounted_for():
     ]
     rules = _drop_prefixes(load_mapping(SCOPE))
     ingested = set()
-    for name in ("cesd10", "paid5"):
-        ingested |= set(
-            load_mapping(CONFIG_DIR / "observation" / f"{name}.yaml").get("measures") or {}
-        )
+    for instrument in sorted((CONFIG_DIR / "observation").glob("*.yaml")):
+        if instrument.name == "scope.yaml":
+            continue
+        ingested |= set(load_mapping(instrument).get("measures") or {})
     # Items belonging to measurement.csv, and lab rows whose SRC_CODE *is* a LOINC code.
     measurement_families = (
         "import_", "lbscat_", "bmi_", "bp1_", "bp2_", "height_", "weight_", "waist_", "hip_",
-        "whr_", "pulse_", "viaod", "viaos", "plcs", "mlcs", "mss", "msl", "moca", "naming",
+        "whr_", "pulse_", "viao", "plcs", "mlcs", "mss", "msl", "moca", "naming",
         "digitspan", "lettera", "subtraction", "repetition", "fluency", "delayed", "memory_",
         "trails", "cube", "clock",
     )

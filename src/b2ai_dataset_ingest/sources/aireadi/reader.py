@@ -138,7 +138,6 @@ class AireadiSource(Source):
         root: Path,
         config_dir: Path,
         mappings: Iterable[Path] | None = None,
-        supplements_dir: Path | None = None,
         files: str = "none",
         device_summaries: bool = False,
     ) -> None:
@@ -152,9 +151,6 @@ class AireadiSource(Source):
         self.files_mode = files
         #: Emit the ECG intervals and the CGM / wearable window summaries as Measurements.
         self.device_summaries = device_summaries
-        #: Where the protected supplements (demographics, medications) live when staged
-        #: outside the release tree; None -> the ``file`` globs in their configs, under root.
-        self.supplements_dir = Path(supplements_dir) if supplements_dir else None
         self._dataset_cfg: dict[str, Any] | None = None
         #: SSSOM files carrying value-gated rules; None -> the shipped aireadi sets.
         self._mappings = list(mappings) if mappings is not None else None
@@ -292,7 +288,7 @@ class AireadiSource(Source):
             mapping = self._config(f"supplements/{name}.yaml")
             if mapping is None:
                 continue
-            path = resolve_supplement(self.root, mapping, self.supplements_dir)
+            path = resolve_supplement(self.root, mapping)
             if path is None:
                 self.report.tables_missing.append(mapping.get("table", name))
                 continue

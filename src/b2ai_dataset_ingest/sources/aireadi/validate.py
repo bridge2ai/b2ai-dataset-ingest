@@ -129,7 +129,6 @@ def validate_aireadi(
     config_dir: Path,
     strict_coverage: bool = False,
     modalities: bool = False,
-    supplements_dir: Path | None = None,
 ) -> ValidationReport:
     """Validate the on-disk AI-READI layout at ``root`` against configs in ``config_dir``.
 
@@ -153,7 +152,7 @@ def validate_aireadi(
         root, config_dir, report, "conditions.yaml", "conditions", strict_coverage
     )
     _validate_measurements(root, config_dir, report, strict_coverage)
-    _validate_supplements(root, config_dir, report, strict_coverage, supplements_dir)
+    _validate_supplements(root, config_dir, report, strict_coverage)
     _validate_dqd(root, report)
     if modalities:
         _validate_modalities(root, config_dir, report, strict_coverage)
@@ -167,19 +166,20 @@ def _validate_supplements(
     config_dir: Path,
     report: ValidationReport,
     strict_coverage: bool,
-    supplements_dir: Path | None,
 ) -> None:
     """Header and fill checks for the demographics and medications supplements.
 
     An absent supplement is a completeness finding (warning; error under strict), because
-    the public tier never ships them. A present one must carry its id column and every
-    mapped column; a mapped column that is blank or declined on every row is reported, so
-    a supplement that adds no sex is visible. Column names and counts only.
+    the public tier never ships them; the note says where under ``root`` to stage it. A
+    present one must carry its id column and every mapped column; a mapped column that is
+    blank or declined on every row is reported, so a supplement that adds no sex is
+    visible. Column names and counts only.
     """
     from b2ai_dataset_ingest.sources.aireadi.supplements import (
         DECLINED,
         resolve_supplement,
         stream_table,
+        supplement_location_hint,
     )
 
     for name in ("demographics", "medications"):
@@ -187,9 +187,10 @@ def _validate_supplements(
         if mapping is None:
             continue
         table = mapping.get("table", name)
-        path = resolve_supplement(root, mapping, supplements_dir)
+        path = resolve_supplement(root, mapping)
         if path is None:
-            _note_missing_table(report, table, str(mapping.get("file", name)), strict_coverage)
+            hint = supplement_location_hint(root, mapping)
+            _note_missing_table(report, table, hint, strict_coverage)
             continue
         try:
             rows = list(stream_table(path))
