@@ -47,3 +47,7 @@ writing conversion logic.
   still be added later if YAML proves insufficient.
 - **LinkML schema for the IR now**: fits the team's ecosystem and would document the IR, but
   adds upfront complexity. Deferred — start with Pydantic, revisit if the IR stabilizes.
+  *(2026-10-22: the IR stabilised through the AI-READI flagship work and now has a LinkML
+  contract, `schema/b2ai_ir.yaml`, held in lockstep with `model/core.py` by
+  `tests/test_ir_schema.py`. Pydantic remains the executable model; see ADR-0002, amended
+  2026-10-22.)*
