@@ -40,7 +40,7 @@ emit_onset: false                    # see header; *_start_date is the form-fill
 conditions:
   mhoccur_hbp:   { id: "MONDO:0005044", label: "hypertensive disorder" }            # 316866      n=5635
   mhoccur_clsh:  { id: "MONDO:0021187", label: "hyperlipidemia" }                   # 4159131     n=5462
-  mhoccur_ra:    { id: "MONDO:0006816", label: "arthropathy" }                      # 4291025     n=5037
+  mhoccur_ra:    { id: "MONDO:0005578", label: "arthritic joint disease" }          # 4291025     n=5037
   mhterm_dm2:    { id: "MONDO:0005148", label: "type 2 diabetes mellitus" }         # 201826      n=4026
   mhoccur_obs:   { id: "MONDO:0011122", label: "obesity disorder" }                 # 433736      n=4011
   mhoccur_ded:   { id: "MONDO:0006733", label: "dry eye syndrome" }                 # 4036620     n=3734

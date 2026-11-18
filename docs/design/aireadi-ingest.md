@@ -78,11 +78,14 @@ published standard: a second OMOP dataset reuses the module and writes only its 
   `health_survey` form, stem "Has a doctor or other healthcare professional ever told you
   that you have/had…", Yes / No / Prefer not to say (AI-READI DataElementMaps). The reviewer's
   rule was "if this is extracted from EHR, the mapping is exact"; it is not, so where
-  AI-READI attached a concept narrower than the wording asked — `mhoccur_ra` "Arthritis" for
-  "Arthritis (joint pain)", `mhoccur_crt` "Bilateral cataracts" for "Cataracts (in one or both
-  eyes)", `mhoccur_ear` "Ear anomalies with hearing impairment" for "Hearing impairment" — the
-  object follows the wording and the row comment says so. An EHR-sourced release of the same
-  variables would flip those three to `exactMatch` on the concept.
+  AI-READI attached a concept narrower than the wording asked — `mhoccur_crt` "Bilateral
+  cataracts" for "Cataracts (in one or both eyes)", `mhoccur_ear` "Ear anomalies with hearing
+  impairment" for "Hearing impairment" — the object follows the wording and the row comment
+  says so. An EHR-sourced release of the same variables would flip those two to `exactMatch`
+  on the concept. `mhoccur_ra` ("Arthritis (joint pain)", concept "Arthritis") was a third
+  until 2026-11-17: "(joint pain)" is a lay gloss, not a second condition, so the wording and
+  the concept agree and the row is `exactMatch` to MONDO:0005578 *arthritic joint disease*
+  (was `broadMatch` to *arthropathy*; reviewer confirmation pending).
 - **No `Disease.onset`.** `condition_start_date == condition_end_date` on every row: it
   records when the medical-history form was filled in, not any onset. Emitting it as onset
   would assert a false natural history a consumer could not detect.

@@ -229,7 +229,14 @@ i.e. the predicate depends on *what the row is evidence of*. An EHR-coded row is
 coded concept, so the concept name is the subject. A self-report row is evidence of the answer to
 the question, so the **question wording** is the subject and the concept name is a relabelling to
 ignore. All three items are REDCap self-report ("Has a doctor … ever told you that you have/had …"),
-so `cataract`, `hearing loss disorder` and `arthropathy` stand. Two habits follow:
+so `cataract` and `hearing loss disorder` stand. `mhoccur_ra` was first kept at `arthropathy` on
+the same argument and corrected on 2026-11-17 to `exactMatch` MONDO:0005578 *arthritic joint
+disease*: "(joint pain)" is a lay gloss on arthritis, exactly as "(loss of bone density)" is on
+osteoporosis, so the wording and the concept name agree there. Three habits follow:
+
+- **A parenthetical in a survey item is usually a gloss, not a second sense.** Reserve the
+  "conflated A-or-B" treatment for wording that really names two conditions ("urinary infection
+  or incontinence"), and read parentheticals the same way across sibling items.
 
 - **Establish provenance before choosing a predicate**, and record it in the file header, not
   just in your head — the same variable names would flip to `exactMatch` on an EHR-sourced release.
