@@ -265,7 +265,7 @@ curated sets, by OMOP concept id:
 
 | Our set | Covered | Agreement with our curated term |
 | --- | ---: | --- |
-| Conditions (30 ids, 26 mapped) | 24/30 | Same MONDO on ~17; our 6 misses are the AI-READI-local `2005…` ids it cannot know. Disagreements both ways: it gives dyslipidaemia → *inherited lipid metabolism disorder* (wrong), arthritis → MONDO:0005578 *arthritis* (arguably better than our *arthropathy*), T2DM → T2DM **plus** MODY1 (one-to-many noise), and it resolves `mhoccur_ua` to *urinary tract infection*, which our curator left as a conflated TODO. |
+| Conditions (30 ids, 26 mapped) | 24/30 | Same MONDO on ~17; our 6 misses are the AI-READI-local `2005…` ids it cannot know. Disagreements both ways: it gives dyslipidaemia → *inherited lipid metabolism disorder* (wrong), arthritis → MONDO:0005578 *arthritis* (better than our *arthropathy*; adopted 2026-11-17), T2DM → T2DM **plus** MODY1 (one-to-many noise), and it resolves `mhoccur_ua` to *urinary tract infection*, which our curator left as a conflated TODO. |
 | Measurements (35 LOINC) | 14/35 | Low/High poles match our HPO choice on most labs; but "Normal" rows are mapped to the *abnormal* parent (ALT normal → *elevated ALT*), ALT "Low" → *decreased muscle mass*, haemoglobin only Positive/Negative. The 21 misses are our vitals, CBC, lipids and ophthalmic items. |
 
 **Conclusion:** adopt the released mapping sets as a **candidate generator inside the

@@ -220,6 +220,17 @@ Two things bear on a `when_value`, and they are not the same:
 They usually agree. **Where they conflict, weight (2)**: the assertion being emitted is about the
 HPO term, not about the questionnaire.
 
+**Before choosing a cut-point, ask whether the item should gate at all.** A screening instrument
+is validated on its total, not item by item. Clinical review of the AI-READI CES-D-10 rows
+(2026-11-17): "Only this item [the total score] has meaningful information. ces1-ces10 are not
+necessarily phenotype by themselves." The seven gated item rows were therefore ungated — kept as
+term-to-term mappings, with the withdrawn gate recorded in the comment — and only `cestl`
+(`>=10 & <=30`, the published screening cut-off) derives a feature. The item answers are still
+emitted as Measurements, so nothing is lost but the derived assertion. Where the source ships a
+validated total, gate the total and leave the items semantic-only. Whether this also applies to
+the Voice PHQ-9 / GAD-7 rows, which gate per item and have no total row, is an open question
+with the reviewer; those rows are unchanged until it is answered.
+
 **Compare answer labels, never the integers.** Two instruments can gate the same HPO term at the
 same *severity* while using different numbers, because their scales differ in length and in kind.
 `HP:0012154` *Anhedonia* is gated three ways:

@@ -51,6 +51,14 @@ wrong cut-point. Default reasoning, to be confirmed by a domain expert:
   on clinical review for exactly this ("≥3 of this item alone does not support the presence of
   impulsivity"): the ASRS scores impulsivity across several items and interrupting has
   non-impulsive causes. Leave the semantic row, drop the gate.
+- **Where the instrument ships a validated total, gate the total, not the items.** The AI-READI
+  CES-D-10 item rows were first gated per item at the lowest non-zero answer (so two restless
+  nights in a week asserted *Sleep disturbance*). Clinical review (2026-11-17): "Only this item
+  [the total] has meaningful information. ces1-ces10 are not necessarily phenotype by
+  themselves." All seven item gates were withdrawn; `cestl` `>=10 & <=30` → HP:0000716
+  *Depression* (broad) is the one row that derives a feature. Propose item rows for such an
+  instrument as semantic-only and say why. Not yet settled for the Voice PHQ-9 / GAD-7 rows
+  (per-item gates, no total row) — ask, do not assume either way.
 
 Flag the cut-point as **needs expert sign-off** in the review artifact, separately from the
 (auto-verified) ontology code.

@@ -78,11 +78,14 @@ published standard: a second OMOP dataset reuses the module and writes only its 
   `health_survey` form, stem "Has a doctor or other healthcare professional ever told you
   that you have/had…", Yes / No / Prefer not to say (AI-READI DataElementMaps). The reviewer's
   rule was "if this is extracted from EHR, the mapping is exact"; it is not, so where
-  AI-READI attached a concept narrower than the wording asked — `mhoccur_ra` "Arthritis" for
-  "Arthritis (joint pain)", `mhoccur_crt` "Bilateral cataracts" for "Cataracts (in one or both
-  eyes)", `mhoccur_ear` "Ear anomalies with hearing impairment" for "Hearing impairment" — the
-  object follows the wording and the row comment says so. An EHR-sourced release of the same
-  variables would flip those three to `exactMatch` on the concept.
+  AI-READI attached a concept narrower than the wording asked — `mhoccur_crt` "Bilateral
+  cataracts" for "Cataracts (in one or both eyes)", `mhoccur_ear` "Ear anomalies with hearing
+  impairment" for "Hearing impairment" — the object follows the wording and the row comment
+  says so. An EHR-sourced release of the same variables would flip those two to `exactMatch`
+  on the concept. `mhoccur_ra` ("Arthritis (joint pain)", concept "Arthritis") was a third
+  until 2026-11-17: "(joint pain)" is a lay gloss, not a second condition, so the wording and
+  the concept agree and the row is `exactMatch` to MONDO:0005578 *arthritic joint disease*
+  (was `broadMatch` to *arthropathy*; reviewer confirmation pending).
 - **No `Disease.onset`.** `condition_start_date == condition_end_date` on every row: it
   records when the medical-history form was filled in, not any onset. Emitting it as onset
   would assert a false natural history a consumer could not detect.
@@ -203,12 +206,17 @@ each named per row in `threshold_source`; sex-split intervals are collapsed to s
 conservative gates because `Individual.sex` is redacted in the public release.
 
 **`observation.csv` — self-report, presence only.** `mappings/b2ai-aireadi-observation.sssom.tsv`
-gates the CES-D-10 items and total (8 rows, bounded `in {..}` gates, cut-points chosen by
-comparing answer labels with the Voice PHQ-9 rows) and maps the medical-history grid, falls
-and the vision-function items term-to-term **ungated**, with the intended gate written in each
-row's comment: those families are dropped by `scope.yaml` and a gated row must name an
-emitted assay. Rows pivot to the plain `{item: value}` view via `omop.as_row`, which is exactly
-the contract `hpo_rules.derive_features` already takes. The gated path buffers only the items
+gates the falls and vision-function items and, of CES-D-10, the **total only** (`cestl`,
+`>=10 & <=30`, the published screening cut-off).
+The seven CES-D-10 item rows were gated on the answer label until 2026-11-17; clinical review
+ruled that "only this item [the total] has meaningful information — ces1-ces10 are not
+necessarily phenotype by themselves", so they are now term-to-term only, each keeping its
+withdrawn gate in the comment. The item answers are still emitted as LOINC Measurements; only
+the derived features went. The set also maps the medical-history grid term-to-term
+**ungated**, with the intended gate written in each row's comment: that family is dropped by
+`scope.yaml` and a gated row must name an emitted assay. Rows pivot to the plain
+`{item: value}` view via `omop.as_row`, which is exactly the contract
+`hpo_rules.derive_features` already takes. The gated path buffers only the items
 that actually carry a rule rather than all ~355.
 
 Two defences stop a refusal code asserting a phenotype from self-report, and both are needed.
@@ -219,13 +227,15 @@ bounded (`in {1,2,3}`, `>=n & <=m`) rather than open-ended — enforced by a tes
 AI-READI sets. Measured values get the first defence only: a continuous assay has no natural
 upper bound to write into a gate.
 
-The CES-D-10 cut-points are marked pending the clinical review the Voice set had: an earlier
-adversarial review disputed direction and cut-point on several proposed CES-D-10 rows, so each
-shipped row records its reasoning for a reviewer to rule on, and
-`tests/test_aireadi_observation.py` pins every shipped cut-point against the fixture so a
-re-curation shows up as a test change rather than a silent shift in output. The path itself is
-also proven there against an injected mapping, the pattern `tests/test_conditional_features.py`
-already uses for Voice.
+The CES-D-10 item cut-points had been marked pending clinical review, and that review
+(2026-11-17) withdrew them rather than adjusting them: the instrument is validated on its
+total, not item by item. `tests/test_aireadi_observation.py` pins the result against the
+fixture — an endorsed item derives nothing, its answer is still a Measurement, and `cestl` is
+the only CES-D-10 subject with a gate — so a re-curation that gates an item again shows up as
+a test change rather than a silent shift in output. The item-level path itself is still proven
+there against an injected mapping, the pattern `tests/test_conditional_features.py` already
+uses for Voice. Open with the reviewer: whether the same rule applies to the Voice
+questionnaire set, whose PHQ-9 and GAD-7 rows gate per item and which has no PHQ-9 total row.
 
 ## 5. Testing strategy
 
