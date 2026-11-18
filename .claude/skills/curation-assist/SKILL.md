@@ -56,8 +56,9 @@ pretending it is deterministic, and to make step 2 **airtight**.
    assert it is present*. Follow `references/when-value.md`: pick the cut-point, add the column
    to the row you already wrote, and flag the threshold as **needs expert sign-off** -- the
    validator checks that it *parses*, never that it is clinically right. Leave `when_value`
-   empty for a purely semantic mapping. **Only presence is ever asserted** (absent poles were
-   withdrawn on clinical review), and only `exactMatch`/`broadMatch` rows may carry a gate.
+   empty for a purely semantic mapping. For self-report rows **only presence is ever asserted**
+   (absent poles were withdrawn on clinical review) and only `exactMatch`/`broadMatch` rows may
+   carry a gate; measured-value rows differ, see `references/when-value.md`.
 7. **Emit a review artifact**, not a fait accompli -- one row per candidate in the format in
    `references/review-artifact.md`: proposal, rationale, alternatives, confidence, and an
    explicit split of *auto-verified* (code is real/current) vs *needs expert sign-off*

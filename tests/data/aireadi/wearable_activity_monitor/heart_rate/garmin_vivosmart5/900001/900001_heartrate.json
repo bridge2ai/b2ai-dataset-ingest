@@ -1,0 +1,24 @@
+{
+  "header": {
+    "uuid": "AIREADI-900001",
+    "creation_date_time": "2024-01-16T08:00:00Z",
+    "patient_id": "AIREADI-900001",
+    "schema_id": {"namespace": "omh", "name": "heart-rate", "version": 2.0},
+    "modality": "sensed",
+    "acquisition_rate": {"number_of_times": 1, "time_window": {"value": 15, "unit": "min"}},
+    "external_datasheets": {"datasheet_type": "source_device", "datasheet_reference": "iri-of-garmin-device"},
+    "timezone": "PST"
+  },
+  "body": {
+    "heart_rate": [
+      {"heart_rate": {"value": 58, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-16T03:00:00Z"}},
+      {"heart_rate": {"value": 55, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-16T03:15:00Z"}},
+      {"heart_rate": {"value": 61, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-16T03:30:00Z"}},
+      {"heart_rate": {"value": 72, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-16T12:00:00Z"}},
+      {"heart_rate": {"value": 95, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-16T12:15:00Z"}},
+      {"heart_rate": {"value": 110, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-16T12:30:00Z"}},
+      {"heart_rate": {"value": 70, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-17T12:00:00Z"}},
+      {"heart_rate": {"value": 75, "unit": "beats/min"}, "effective_time_frame": {"date_time": "2024-01-17T12:15:00Z"}}
+    ]
+  }
+}

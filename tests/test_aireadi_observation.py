@@ -153,14 +153,14 @@ def test_no_published_observation_item_is_unaccounted_for():
     ]
     rules = _drop_prefixes(load_mapping(SCOPE))
     ingested = set()
-    for name in ("cesd10", "paid5"):
-        ingested |= set(
-            load_mapping(CONFIG_DIR / "observation" / f"{name}.yaml").get("measures") or {}
-        )
+    for instrument in sorted((CONFIG_DIR / "observation").glob("*.yaml")):
+        if instrument.name == "scope.yaml":
+            continue
+        ingested |= set(load_mapping(instrument).get("measures") or {})
     # Items belonging to measurement.csv, and lab rows whose SRC_CODE *is* a LOINC code.
     measurement_families = (
         "import_", "lbscat_", "bmi_", "bp1_", "bp2_", "height_", "weight_", "waist_", "hip_",
-        "whr_", "pulse_", "viaod", "viaos", "plcs", "mlcs", "mss", "msl", "moca", "naming",
+        "whr_", "pulse_", "viao", "plcs", "mlcs", "mss", "msl", "moca", "naming",
         "digitspan", "lettera", "subtraction", "repetition", "fluency", "delayed", "memory_",
         "trails", "cube", "clock",
     )
@@ -273,9 +273,9 @@ def test_monofilament_carries_the_examination_but_an_unlateralized_site(particip
 #
 # The path is proven here against an INJECTED mapping, exactly as
 # tests/test_conditional_features.py does for Voice, independently of whatever the shipped
-# set says; the shipped CES-D-10 rows are pinned separately above. (An earlier adversarial
-# review disputed direction and cut-point on several proposed CES-D-10 rows; the shipped set
-# records its reasoning per row and awaits the clinical review the Voice set had.)
+# set says; the shipped CES-D-10 rows are pinned separately below. (The injected row gates a
+# CES-D-10 ITEM on purpose: the shipped set no longer does, so the item-level path is only
+# exercised here.)
 GATED_SET = """# curie_map:
 #   b2ai: https://github.com/sujaypatil96/b2ai-dataset-ingest#
 #   HP: http://purl.obolibrary.org/obo/HP_
@@ -332,9 +332,12 @@ def test_a_refusal_code_on_a_gated_item_derives_nothing(tmp_path):
 
 # ---------- the shipped CES-D-10 rows, against the fixture
 #
-# mappings/b2ai-aireadi-observation.sssom.tsv gates the CES-D-10 items and total. These pin
-# the shipped cut-points against the fixture answers, so a re-curation that moves one shows
-# up here rather than as a silent change in someone's output.
+# mappings/b2ai-aireadi-observation.sssom.tsv gates the CES-D-10 TOTAL and nothing else.
+# Clinical review (2026-11-17): "Only this item [the total] has meaningful information.
+# ces1-ces10 are not necessarily phenotype by themselves." The item rows stay in the set as
+# term-to-term mappings with no gate. These pin that against the fixture answers, so a
+# re-curation that gates an item again shows up here rather than as a silent change in
+# someone's output.
 
 
 def _observed(packet):
@@ -344,22 +347,26 @@ def _observed(packet):
     }
 
 
-def test_an_endorsed_cesd_item_derives_the_phenotype_with_self_report_evidence(participants):
-    """900001 answers ces3 'I felt depressed' at 3 -> Pathological sadness, self-reported."""
-    assert "HP:5200273" in _observed(participants["900001"])
-    feature = next(f for f in participants["900001"].phenotypic_features
-                   if f.type.id == "HP:5200273")
-    assert not feature.excluded
-    assert feature.evidence[0].reference.id == "b2ai:observation.ces3"
+def test_an_endorsed_cesd_item_derives_no_feature(participants):
+    """900001 answers ces3 'I felt depressed' at 3, the top rung, and 900002 answers ces7
+    'My sleep was restless' at 2. Neither item answer is a phenotype on its own, so neither
+    Pathological sadness nor Sleep disturbance is asserted for anyone."""
+    for packet in participants.values():
+        assert not {"HP:5200273", "HP:0002360"} & _observed(packet)
 
 
-def test_the_lowest_cesd_rung_is_inside_the_gate(participants):
-    """900002 answers ces3 at 1 ('Some or a little of the time, 1-2 days') -> present.
+def test_the_cesd_item_answer_is_still_emitted_as_a_measurement(participants):
+    """Withdrawing the gate removes the derived feature, never the answer itself."""
+    (answer,) = _by_assay(participants["900001"], "LOINC:100772-3")  # ces3
+    assert answer.value_quantity.value == 3
 
-    The repo rule is to compare answer LABELS across instruments: 1-2 days of the past week is
-    the endorsement PHQ-9 gates at 'Several days' over two weeks, so the gate is in {1,2,3}.
-    """
-    assert "HP:5200273" in _observed(participants["900002"])
+
+def test_only_the_cesd_total_carries_a_gate():
+    """Of the eleven CES-D-10 subjects, cestl is the one that gates."""
+    from b2ai_dataset_ingest.mapping.hpo_rules import load_conditional_rules
+
+    gated = set(load_conditional_rules(dataset="aireadi").get("observation", {}))
+    assert {item for item in gated if item.startswith("ces")} == {"cestl"}
 
 
 def test_a_zero_asserts_nothing_and_never_an_absence(participants):
@@ -371,12 +378,10 @@ def test_a_zero_asserts_nothing_and_never_an_absence(participants):
 def test_the_cesd_total_screen_derives_depression(participants):
     """900001's total of 14 is at or above the published screening cut-off of 10."""
     assert "HP:0000716" in _observed(participants["900001"])
-
-
-def test_a_refusal_code_on_a_shipped_gate_derives_nothing(participants):
-    """900001 answers ces7 with 777; 900002 answers it at 2. Only the latter derives."""
-    assert "HP:0002360" not in _observed(participants["900001"])
-    assert "HP:0002360" in _observed(participants["900002"])
+    feature = next(f for f in participants["900001"].phenotypic_features
+                   if f.type.id == "HP:0000716")
+    assert not feature.excluded
+    assert feature.evidence[0].reference.id == "b2ai:observation.cestl"
 
 
 def test_reverse_scored_items_are_semantic_only(participants):
@@ -391,5 +396,9 @@ def test_only_ingested_observation_items_carry_a_gate():
     from b2ai_dataset_ingest.mapping.hpo_rules import load_conditional_rules
 
     gated = set(load_conditional_rules(dataset="aireadi").get("observation", {}))
-    ingested = set(load_mapping(CONFIG_DIR / "observation" / "cesd10.yaml")["measures"])
+    ingested: set[str] = set()
+    for path in (CONFIG_DIR / "observation").glob("*.yaml"):
+        ingested |= set(load_mapping(path).get("measures") or {})
     assert gated and gated <= ingested
+    # ...and the medical-history grid stays term-to-term only, pending the absent-pole review.
+    assert not any(item.startswith(("mhoccur_h", "mhterm_", "mh_")) for item in gated)

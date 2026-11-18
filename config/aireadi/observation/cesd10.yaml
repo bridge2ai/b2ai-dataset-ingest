@@ -31,9 +31,11 @@
 # (`Choices_Calculations_OR_Slider_Labels`) -- the storage convention is the source's, and a
 # release that changed it would need this comment changed with it.
 #
-# HPO derivation is separate and lives in mappings/b2ai-aireadi-signs-symptoms.sssom.tsv:
-# a value-gated row there derives a PhenotypicFeature from a participant's answer. The
-# recall window is ONE WEEK, which is why only presence is ever asserted (see
+# HPO derivation is separate and lives in mappings/b2ai-aireadi-observation.sssom.tsv. Only
+# the TOTAL (`cestl`, >= 10) derives a PhenotypicFeature there. The ten items are emitted here
+# as Measurements and derive nothing: clinical review (2026-11-17) ruled that only the total
+# carries meaningful information and the items are not phenotypes by themselves. The recall
+# window is ONE WEEK, which is why only presence is ever asserted (see
 # docs/mapping-conventions.md, "Why absence is not asserted").
 
 table: observation

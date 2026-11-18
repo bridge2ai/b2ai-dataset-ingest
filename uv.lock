@@ -124,6 +124,9 @@ clustering = [
 hpo = [
     { name = "hpo-toolkit" },
 ]
+supplements = [
+    { name = "openpyxl" },
+]
 validation = [
     { name = "oaklib" },
 ]
@@ -139,6 +142,7 @@ requires-dist = [
     { name = "hpo-toolkit", marker = "extra == 'hpo'", specifier = ">=0.8.1" },
     { name = "matplotlib", marker = "extra == 'analysis'", specifier = ">=3.8" },
     { name = "oaklib", marker = "extra == 'validation'", specifier = ">=0.7.2" },
+    { name = "openpyxl", marker = "extra == 'supplements'", specifier = ">=3.1" },
     { name = "pandas", marker = "extra == 'analysis'", specifier = ">=2.0" },
     { name = "phenopackets", specifier = ">=2.0.2" },
     { name = "pydantic", specifier = ">=2.6" },
@@ -146,7 +150,7 @@ requires-dist = [
     { name = "stratiphy", marker = "extra == 'clustering'", specifier = ">=0.5.1" },
     { name = "typer", specifier = ">=0.12" },
 ]
-provides-extras = ["validation", "analysis", "hpo", "clustering"]
+provides-extras = ["validation", "supplements", "analysis", "hpo", "clustering"]
 
 [package.metadata.requires-dev]
 dev = [

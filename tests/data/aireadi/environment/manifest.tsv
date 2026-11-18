@@ -1,0 +1,3 @@
+participant_id	modality	env_sensor_filepath	sensor_location	number_of_observations	sensor_sampling_extent_in_days	sensor_id	manufacturer	manufacturers_model_name	meta_sensor_sampling_interval	number_of_data_columns
+900001	environmental_sensor	/environment/environmental_sensor/leelab_anura/900001/900001_ENV.csv	Living room	172800	10.0	FIXTURE0001	Leelab	Anura	5	22
+900002	environmental_sensor	/environment/environmental_sensor/leelab_anura/900002/900002_ENV.csv	Bedroom	120960	7.0	FIXTURE0002	Leelab	Anura	5	22

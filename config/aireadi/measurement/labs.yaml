@@ -1,3 +1,11 @@
+# CODE CORRECTIONS (2026-10-22), each verified by exact-code lookup against the NLM Clinical Table
+# LOINC service and each the code AI-READI's own crosswalk uses: import_nt_probnp was 30934-4,
+# which is BNP, not NT-proBNP -> 33762-6; import_crp_hs -> 30522-7 (high-sensitivity method);
+# import_ldl_cholesterol -> 13457-7 (by calculation; AI-READI documents LDL as a calculated field).
+# The SSSOM set already annotated these three rows with the corrected codes (loinc_id).
+# LOINC TRANCHE (2026-10-22): the assay ids below that were project-local now carry LOINC codes
+# verified by exact-code lookup against the NLM Clinical Table LOINC service, with the
+# LONG_COMMON_NAME as label. SSSOM subjects are unaffected (they key on the item, not the assay).
 # Mapping: AI-READI clinical_data/measurement.csv, families import_* and lbscat_* -> MeasurementObservation (IR)
 #
 # 29 central-lab analytes (import_*) and 9 site CBC items (lbscat_*).
@@ -69,7 +77,7 @@ measures:
     assay: { id: "LOINC:2160-0", label: "Creatinine [Mass/volume] in Serum or Plasma" }
     unit: { id: "UCUM:mg/dL", label: "mg/dL" }
   import_crp_hs:
-    assay: { id: "LOINC:1988-5", label: "C reactive protein [Mass/volume] in Serum or Plasma" }
+    assay: { id: "LOINC:30522-7", label: "C reactive protein [Mass/volume] in Serum or Plasma by High sensitivity method" }
     unit: { id: "UCUM:mg/L", label: "mg/L" }
   import_glucose:
     assay: { id: "LOINC:2345-7", label: "Glucose [Mass/volume] in Serum or Plasma" }
@@ -81,7 +89,7 @@ measures:
     assay: { id: "LOINC:2085-9", label: "Cholesterol in HDL [Mass/volume] in Serum or Plasma" }
     unit: { id: "UCUM:mg/dL", label: "mg/dL" }
   import_ldl_cholesterol:
-    assay: { id: "LOINC:2089-1", label: "Cholesterol in LDL [Mass/volume] in Serum or Plasma" }
+    assay: { id: "LOINC:13457-7", label: "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation" }
     unit: { id: "UCUM:mg/dL", label: "mg/dL" }
   import_total_cholesterol:
     assay: { id: "LOINC:2093-3", label: "Cholesterol [Mass/volume] in Serum or Plasma" }
@@ -96,34 +104,35 @@ measures:
     assay: { id: "LOINC:2951-2", label: "Sodium [Moles/volume] in Serum or Plasma" }
     unit: { id: "UCUM:meq/L", label: "mEq/L" }
   import_protein_total:
-    assay: { id: "b2ai:measurement.import_protein_total", label: "Total protein [Mass/volume] in Serum or Plasma" }   # 3020630 -- LOINC not verified yet
+    assay: { id: "LOINC:2885-2", label: "Protein [Mass/volume] in Serum or Plasma" }   # 3020630 -- LOINC not verified yet
     unit: { id: "UCUM:g/dL", label: "g/dL" }
   import_globulin_total:
-    assay: { id: "b2ai:measurement.import_globulin_total", label: "Globulin [Mass/volume] in Serum or Plasma" }   # 3021886
+    assay: { id: "LOINC:10834-0", label: "Globulin [Mass/volume] in Serum by calculation" }   # 3021886
+    crosswalk_code: "2336-6"   # the crosswalk uses the plain serum globulin code; AI-READI's is a calculated field
     unit: { id: "UCUM:g/dL", label: "g/dL" }
   import_a_g_ratio:
-    assay: { id: "b2ai:measurement.import_a_g_ratio", label: "Albumin/Globulin ratio" }   # 4288601
+    assay: { id: "LOINC:1759-0", label: "Albumin/Globulin [Mass Ratio] in Serum or Plasma" }   # 4288601
     unit: { id: "UCUM:1", label: "ratio" }
   import_buncreatinineratio:
-    assay: { id: "b2ai:measurement.import_buncreatinineratio", label: "BUN/Creatinine ratio" }   # 4112223
+    assay: { id: "LOINC:3097-3", label: "Urea nitrogen/Creatinine [Mass Ratio] in Serum or Plasma" }   # 4112223
     unit: { id: "UCUM:1", label: "ratio" }
   import_c_peptide:
-    assay: { id: "b2ai:measurement.import_c_peptide", label: "C peptide [Mass/volume] in Serum or Plasma" }   # 3010084
+    assay: { id: "LOINC:1986-9", label: "C peptide [Mass/volume] in Serum or Plasma" }   # 3010084
     unit: { id: "UCUM:ng/L", label: "ng/L" }
   import_insulin:
-    assay: { id: "b2ai:measurement.import_insulin", label: "Insulin [Units/volume] in Serum or Plasma" }   # 3016244
+    assay: { id: "LOINC:20448-7", label: "Insulin [Units/volume] in Serum or Plasma" }   # 3016244
     unit: { id: "UCUM:ng/L", label: "ng/L" }
   import_nt_probnp:
-    assay: { id: "LOINC:30934-4", label: "Natriuretic peptide B [Mass/volume] in Serum or Plasma" }   # 3029187 -- NT-proBNP; many rows are below the detection limit and are dropped as censored
+    assay: { id: "LOINC:33762-6", label: "Natriuretic peptide.B prohormone N-Terminal [Mass/volume] in Serum or Plasma" }   # 3029187 -- NT-proBNP; many rows are below the detection limit and are dropped as censored
     unit: { id: "UCUM:pg/mL", label: "pg/mL" }
   import_troponin_t:
-    assay: { id: "b2ai:measurement.import_troponin_t", label: "Troponin T.cardiac [Mass/volume] in Serum or Plasma" }   # 40769783
+    assay: { id: "LOINC:67151-1", label: "Troponin T.cardiac [Mass/volume] in Serum or Plasma by High sensitivity method" }   # 40769783
     unit: { id: "UCUM:ng/L", label: "ng/L" }
   import_urine_albumin:
-    assay: { id: "b2ai:measurement.import_urine_albumin", label: "Albumin [Mass/volume] in Urine" }   # 3012516 -- source unit cell is mojibake '_g/mL' for ug/mL
+    assay: { id: "LOINC:1754-1", label: "Albumin [Mass/volume] in Urine" }   # 3012516 -- source unit cell is mojibake '_g/mL' for ug/mL
     unit: { id: "UCUM:ug/mL", label: "ug/mL" }
   import_urine_creatinine:
-    assay: { id: "b2ai:measurement.import_urine_creatinine", label: "Creatinine [Mass/volume] in Urine" }   # 3017250 -- same mojibake
+    assay: { id: "LOINC:2161-8", label: "Creatinine [Mass/volume] in Urine" }   # 3017250 -- same mojibake
     unit: { id: "UCUM:ug/mL", label: "ug/mL" }
   lbscat_a1c:
     assay: { id: "LOINC:718-7", label: "Hemoglobin [Mass/volume] in Blood" }   # 3000963 -- the ITEM KEY IS MISLEADING: concept 3000963 is Hemoglobin, not HbA1c, and the label says 'Hemoglobin - g/dL'
@@ -144,7 +153,7 @@ measures:
     assay: { id: "LOINC:777-3", label: "Platelets [#/volume] in Blood by Automated count" }   # 3007461
     unit: { id: "UCUM:10*3/uL", label: "x10E3/uL" }
   lbscat_rbc:
-    assay: { id: "b2ai:measurement.lbscat_rbc", label: "Erythrocytes [#/volume] in Blood by Automated count" }   # 2005200183 -- AI-READI-local concept
+    assay: { id: "LOINC:789-8", label: "Erythrocytes [#/volume] in Blood by Automated count" }   # 2005200183 -- AI-READI-local concept
     unit: { id: "UCUM:10*6/uL", label: "x10E6/uL" }
   lbscat_rdw:
     assay: { id: "LOINC:788-0", label: "Erythrocyte [DistWidth] in Blood by Automated count" }   # 3002385

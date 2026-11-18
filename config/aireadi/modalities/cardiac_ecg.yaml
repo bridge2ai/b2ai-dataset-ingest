@@ -1,0 +1,50 @@
+# AI-READI cardiac_ecg/ (Philips PageWriter TC30, 12-lead, WFDB) -> File links + Measurements
+#
+# The manifest carries one row per recording with the device's own numeric intervals and
+# axes. Those are machine measurements of a dated recording, so each is a Measurement; the
+# waveform itself (.hea + .dat) is LINKED, never embedded (docs/plans/0002 step 20).
+#
+# NOT INGESTED, deliberately: the .hea `interpretation_comment_*` / `comment_*_key` strings
+# ("RBBB and LAFB", "OTHERWISE NORMAL ECG"). AI-READI states they are device-generated and
+# "not reviewed by a physician". Mapping an unconfirmed device diagnosis to HPO would assert
+# a finding nobody confirmed; the intervals are numbers and can be gated on guideline
+# cut-points instead (mappings/b2ai-aireadi-devices.sssom.tsv).
+#
+# LOINC codes verified by exact-code lookup against the NLM Clinical Table LOINC service on
+# 2026-10-22; each LONG_COMMON_NAME matches the manifest column's documented meaning
+# (docs.aireadi.org v3, cardiac-ecg). Units: the manifest documents ms for intervals,
+# degrees for axes, bpm for rate.
+datatype: cardiac_ecg
+table: cardiac_ecg
+manifest: manifest.tsv
+id_column: participant_id
+file_columns: [wfdb_hea_filepath, wfdb_dat_filepath]
+file_format: WFDB
+attribute_columns: [manufacturer, manufacturer_device_model, participant_position]
+recording_column: wfdb_hea_filepath
+description: "12-lead ECG"
+measures:
+  Rate:
+    assay: { id: "LOINC:8867-4", label: "Heart rate" }
+    unit: { id: "UCUM:/min", label: "per minute" }
+  PR:
+    assay: { id: "LOINC:8625-6", label: "P-R Interval" }
+    unit: { id: "UCUM:ms", label: "millisecond" }
+  QRSD:
+    assay: { id: "LOINC:8633-0", label: "QRS duration" }
+    unit: { id: "UCUM:ms", label: "millisecond" }
+  QT:
+    assay: { id: "LOINC:8634-8", label: "Q-T interval" }
+    unit: { id: "UCUM:ms", label: "millisecond" }
+  QTc:
+    assay: { id: "LOINC:8636-3", label: "Q-T interval corrected" }
+    unit: { id: "UCUM:ms", label: "millisecond" }
+  P:
+    assay: { id: "LOINC:8626-4", label: "P wave axis" }
+    unit: { id: "UCUM:deg", label: "degree" }
+  QRS:
+    assay: { id: "LOINC:8632-2", label: "QRS axis" }
+    unit: { id: "UCUM:deg", label: "degree" }
+  T:
+    assay: { id: "LOINC:8638-9", label: "T wave axis" }
+    unit: { id: "UCUM:deg", label: "degree" }

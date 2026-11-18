@@ -101,15 +101,9 @@ drop_rules:
   # Left OUT of v1 on purpose: it is still self-report, it would add a large number of
   # excluded Diseases per packet, and it is the same clinical judgement the reviewer has
   # already ruled on once. It wants a clinician's sign-off, not a config edit.
-  # LISTED BEFORE `mhoccur_*` ON PURPOSE -- rules are tried in order, and these two are NOT
-  # medical-history condition checkboxes despite sharing the prefix. `mhoccur_fall` asks
-  # "Have you fallen in the last 12 months?" and `mhoccur_fallot` how many times. They have a
-  # 12-month recall window, they are not in condition_occurrence, and the reason attached to
-  # the general rule below would be simply false about them. A prefix is not a family.
-  "mhoccur_fall*": "Falls in the last 12 months, and their count. NOT a medical-history
-    condition checkbox despite the prefix, and not present in condition_occurrence. Falls are
-    a real geriatric outcome and this is INGESTABLE; deferred only because the terms are not
-    curated."
+  # `mhoccur_fall` / `mhoccur_fallot` share this prefix but are NOT condition checkboxes;
+  # they are ingested by observation/falls.yaml, and a configured item always wins over a
+  # drop rule, so the general rule below never reaches them.
 
   "mhoccur_*": "Medical-history yes/no. Affirmatives are already Diseases from
     condition_occurrence; the negatives would need an absent-pole decision -- see the SDD."
@@ -159,10 +153,13 @@ drop_rules:
   # could be ingested; none has had its terms curated yet.
   "diet*": "Rapid diet screener. Ingestable; terms not yet curated."
   "dml*": "Diabetes self-management survey. Ingestable; terms not yet curated."
-  "su*": "Substance use (tobacco, alcohol, marijuana, vaping). Ingestable; not yet curated."
-  "via*": "Vision-function questionnaire. Ingestable; not yet curated. Note the ophthalmic
-    MEASUREMENTS of the same name family are ingested from measurement.csv."
   "dri*": "Driving record. Ingestable; not yet curated."
   "fh_*": "Family history of Type 2 diabetes. Would need a phenopacket family/pedigree
     model, which this project does not have."
   "moca*": "MoCA cognitive assessment. Its subscores live in measurement.csv, not here."
+  # -- ingested families with one item each left aside ----------------------------------
+  "via5": "Why the participant has not seen an eye care professional: a check-all-that-apply
+    of access barriers, stored as one row per choice. Access, not phenotype; the rest of the
+    ophthalmic survey is ingested by observation/vision_function.yaml."
+  "sumrjtrt": "Form in which marijuana is used, check-all-that-apply: one row per choice, no
+    scalar. The rest of the substance-use survey is ingested by observation/substance_use.yaml."

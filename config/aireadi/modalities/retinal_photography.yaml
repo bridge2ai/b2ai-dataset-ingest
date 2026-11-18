@@ -1,0 +1,22 @@
+# AI-READI retinal_photography/ (DICOM; cfp / ir / faf across six devices) -> File links only
+#
+# The largest datatype: a median of 42 images per participant, up to 64, over four CFP
+# devices (iCare Eidon, Optomed Aurora, Topcon Maestro2, Topcon Triton), four IR devices
+# and one FAF. Nothing in the release carries a grading or a measurement derived from the
+# images, so there is nothing to emit as a Measurement; the packet links each image with
+# its laterality, anatomic region, imaging type and protocol from the manifest so a
+# consumer can select images without opening DICOM headers.
+#
+# `--files folder` collapses this to one link per participant per device directory with a
+# fileCount, for consumers who do not need per-image attributes.
+#
+# retinal_oct / retinal_octa / retinal_flio: documented for v3 but ABSENT from the delivery
+# manifest received 2026-10-22. Add a config per datatype once they arrive; the modality
+# preflight reports which are present.
+datatype: retinal_photography
+table: retinal_photography
+manifest: manifest.tsv
+id_column: participant_id
+file_columns: [filepath]
+file_format: DICOM
+attribute_columns: [manufacturer, manufacturers_model_name, laterality, anatomic_region, imaging, protocol]

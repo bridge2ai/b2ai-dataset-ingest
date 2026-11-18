@@ -1,0 +1,71 @@
+# AI-READI wearable_activity_monitor/ (Garmin Vivosmart 5, 10 days, mHealth JSON)
+#   -> File links + window summaries for heart rate and oxygen saturation
+#
+# Seven sub-modalities ship per participant (heart_rate, oxygen_saturation, sleep,
+# physical_activity, physical_activity_calorie, respiratory_rate, stress). All seven are
+# LINKED as files. Only the two whose JSON body layout AI-READI documents (docs.aireadi.org
+# v3, wearable-activity-monitor: `body.heart_rate[].heart_rate.value`,
+# `body.breathing[].oxygen_saturation.value`) are summarised; the others are summarised once
+# their layout is confirmed against a release -- a guessed path would silently yield nothing.
+#
+# Consumer-wearable summaries carry project-local ids and derive NO HPO feature: a wrist
+# optical sensor's 10-day mean is not a resting clinical heart rate, and a one-off dip in
+# nocturnal SpO2 is not hypoxemia. They are provided for completeness, not for phenotyping.
+datatype: wearable_activity_monitor
+table: wearable_activity_monitor
+manifest: manifest.tsv
+id_column: participant_id
+file_columns:
+  - heart_rate_filepath
+  - oxygen_saturation_filepath
+  - sleep_filepath
+  - physical_activity_filepath
+  - physical_activity_calorie_filepath
+  - respiratory_rate_filepath
+  - stress_filepath
+file_format: mHealth-JSON
+attribute_columns: [manufacturer, manufacturers_model_name]
+series:
+  name: heart_rate
+  file_column: heart_rate_filepath
+  key: [body, heart_rate]
+  value_path: [heart_rate, value]
+  time_path: [effective_time_frame, date_time]
+  min_readings: 4
+measures:
+  hr_mean:
+    assay: { id: "b2ai:wearable_activity_monitor.hr_mean", label: "Mean wrist-sensed heart rate over the wear period" }
+    unit: { id: "UCUM:/min", label: "per minute" }
+    statistic: mean
+    description: "Mean of all Garmin heart-rate samples"
+  hr_min:
+    assay: { id: "b2ai:wearable_activity_monitor.hr_min", label: "Minimum wrist-sensed heart rate over the wear period" }
+    unit: { id: "UCUM:/min", label: "per minute" }
+    statistic: min
+    description: "Lowest Garmin heart-rate sample"
+  hr_max:
+    assay: { id: "b2ai:wearable_activity_monitor.hr_max", label: "Maximum wrist-sensed heart rate over the wear period" }
+    unit: { id: "UCUM:/min", label: "per minute" }
+    statistic: max
+    description: "Highest Garmin heart-rate sample"
+# A second series in the same datatype: oxygen saturation. Listed as its own block so the
+# reader runs it as a separate pass over the manifest.
+extra_series:
+  - series:
+      name: oxygen_saturation
+      file_column: oxygen_saturation_filepath
+      key: [body, breathing]
+      value_path: [oxygen_saturation, value]
+      time_path: [effective_time_frame, date_time]
+      min_readings: 2
+    measures:
+      spo2_mean:
+        assay: { id: "b2ai:wearable_activity_monitor.spo2_mean", label: "Mean wrist-sensed oxygen saturation over the wear period" }
+        unit: { id: "UCUM:%", label: "percent" }
+        statistic: mean
+        description: "Mean of all Garmin pulse-oximetry samples"
+      spo2_min:
+        assay: { id: "b2ai:wearable_activity_monitor.spo2_min", label: "Minimum wrist-sensed oxygen saturation over the wear period" }
+        unit: { id: "UCUM:%", label: "percent" }
+        statistic: min
+        description: "Lowest Garmin pulse-oximetry sample"

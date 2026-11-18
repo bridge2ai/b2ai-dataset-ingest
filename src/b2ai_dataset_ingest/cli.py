@@ -227,6 +227,30 @@ def aireadi(
         Path("config/aireadi"), "--config", "-c", help="Mapping config dir."
     ),
     target: str = typer.Option("phenopacket", "--target", "-t", help="Output target."),
+    files: str = typer.Option(
+        "none",
+        "--files",
+        help=(
+            "Link the modality files (imaging, ECG, CGM, wearable, environment) from their "
+            "manifests as Phenopacket.files: 'none' (default), 'folder' (one File per "
+            "participant per device directory, with a fileCount) or 'file' (one per file, "
+            "with laterality/protocol attributes). Never embeds a file."
+        ),
+    ),
+    device_summaries: bool = typer.Option(
+        False,
+        "--device-summaries",
+        help=(
+            "Emit the ECG intervals from the ECG manifest and the CGM / wearable window "
+            "statistics (mean, CV, time in LOINC ranges, GMI) as Measurements. Raw series "
+            "are never emitted as samples."
+        ),
+    ),
+    file_uri_base: str = typer.Option(
+        None,
+        "--file-uri-base",
+        help="Prefix for linked file URIs (default: release-relative paths).",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log per-table warnings."),
 ) -> None:
     """Ingest the Bridge2AI AI-READI dataset (OMOP CDM) into one phenopacket per participant."""
@@ -245,10 +269,19 @@ def aireadi(
         typer.echo(f"target {target!r} is not implemented yet", err=True)
         raise typer.Exit(code=2)
 
-    source = AireadiSource(root=input, config_dir=config)
+    try:
+        source = AireadiSource(
+            root=input,
+            config_dir=config,
+            files=files,
+            device_summaries=device_summaries,
+        )
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
     # The generator is handed straight to the emitter: OMOP tables are large (the synthetic
     # measurement table is 768k rows) and write_all holds nothing.
-    written = PhenopacketEmitter().write_all(source.read(), output)
+    written = PhenopacketEmitter(file_uri_base=file_uri_base).write_all(source.read(), output)
     typer.echo(f"Wrote {written} phenopackets to {output}")
     typer.echo(source.report.render())
 
@@ -269,6 +302,15 @@ def validate_aireadi_cmd(
             "flag it -- see config/aireadi/conditions.yaml."
         ),
     ),
+    modalities: bool = typer.Option(
+        False,
+        "--modalities",
+        help=(
+            "Also inventory the non-clinical datatypes (retinal imaging, ECG, CGM, wearable, "
+            "environment) from their manifest.tsv files: rows, participants and devices per "
+            "datatype, and which documented datatypes the delivery lacks. Counts only."
+        ),
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Log details."),
 ) -> None:
     """Preflight-check the AI-READI OMOP layout against its configs.
@@ -283,7 +325,12 @@ def validate_aireadi_cmd(
         level=logging.INFO if verbose else logging.WARNING,
         format="%(levelname)s %(name)s: %(message)s",
     )
-    report = validate_aireadi(root=input, config_dir=config, strict_coverage=strict_coverage)
+    report = validate_aireadi(
+        root=input,
+        config_dir=config,
+        strict_coverage=strict_coverage,
+        modalities=modalities,
+    )
     typer.echo(report.render())
     if report.errors:
         raise typer.Exit(code=1)
