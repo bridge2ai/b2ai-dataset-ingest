@@ -37,6 +37,11 @@ validation = [
 supplements = [
     "openpyxl>=3.1",
 ]
+# Loading schema/b2ai_ir.yaml (the IR's LinkML contract) through SchemaView in tests. The
+# pydantic classes stay the executable model; nothing at runtime imports linkml.
+schema = [
+    "linkml-runtime>=1.8",
+]
 analysis = [
     "matplotlib>=3.8",
     "pandas>=2.0",
